@@ -1,32 +1,43 @@
 // ============================================
-// ZOMBIE TYPING SHOOTER - PRO EDITION
-// Complete, 100% Working Game
+// ZOMBIE TYPING SHOOTER - FIXED UI/UX
+// Clean, Modern, User-Friendly JavaScript
 // ============================================
 
 // Game Configuration
 const CONFIG = {
-  CANVAS_WIDTH: 1000,
-  CANVAS_HEIGHT: 700,
+  // Display
+  CANVAS_WIDTH: 1200,
+  CANVAS_HEIGHT: 800,
+
+  // Gameplay
   WORD_LENGTH: 5,
-  PLAYER_START_HEALTH: 3,
-  PLAYER_MAX_HEALTH: 5,
-  BOSS_HP: 5,
-  BASE_ZOMBIE_SPEED: 1.0,
-  ZOMBIE_SPAWN_INTERVAL: 2000,
-  WAVE_DURATION: 30000,
-  WAVE_ZOMBIE_COUNT: 8,
-  WAVE_ZOMBIE_INCREMENT: 3,
+  PLAYER_HEALTH: 3,
+  MAX_HEALTH: 5,
+  BOSS_HEALTH: 5,
+
+  // Timing
+  SPAWN_INTERVAL: 2000, // ms
+  WAVE_DURATION: 30000, // ms
+  WAVE_ZOMBIES: 8,
+  COMBO_TIMEOUT: 5000, // ms
 
   // Scoring
-  SCORE_NORMAL: 100,
-  SCORE_HARD: 250,
-  SCORE_BOSS: 1000,
-  COMBO_MULTIPLIER: [1, 1.5, 2, 3, 5],
+  SCORE: {
+    NORMAL: 100,
+    HARD: 250,
+    BOSS: 1000,
+    BOSS_HIT: 50,
+  },
 
   // Coins
-  COINS_NORMAL: 1,
-  COINS_HARD: 3,
-  COINS_BOSS: 10,
+  COINS: {
+    NORMAL: 1,
+    HARD: 3,
+    BOSS: 10,
+  },
+
+  // Combo Multipliers
+  COMBO_MULTIPLIERS: [1, 1.5, 2, 3, 5],
 
   // Difficulty
   DIFFICULTY: {
@@ -37,16 +48,16 @@ const CONFIG = {
 };
 
 // Game State
-let gameState = {
+const GameState = {
   // Current State
-  screen: "loading",
+  currentScreen: "loading",
   gameActive: false,
   gameTime: 0,
   lastUpdate: 0,
 
   // Player Stats
-  health: CONFIG.PLAYER_START_HEALTH,
-  maxHealth: CONFIG.PLAYER_START_HEALTH,
+  health: CONFIG.PLAYER_HEALTH,
+  maxHealth: CONFIG.PLAYER_HEALTH,
   score: 0,
   highScore: 0,
   coins: 0,
@@ -54,15 +65,15 @@ let gameState = {
   zombiesKilled: 0,
   wordsTyped: 0,
   wordsCorrect: 0,
-  currentCombo: 0,
-  maxCombo: 0,
+  currentCombo: 1,
+  maxCombo: 1,
   killStreak: 0,
   lastKillTime: 0,
 
   // Equipment
-  activeGun: "pistol",
+  activeWeapon: "pistol",
   activeSkin: "default",
-  ownedGuns: ["pistol"],
+  ownedWeapons: ["pistol"],
   ownedSkins: ["default"],
 
   // Input
@@ -74,14 +85,13 @@ let gameState = {
   bullets: [],
   particles: [],
   coins: [],
-  effects: [],
   notifications: [],
 
   // Wave Management
   waveStartTime: 0,
   zombiesSpawned: 0,
-  zombiesToSpawn: CONFIG.WAVE_ZOMBIE_COUNT,
-  spawnInterval: CONFIG.ZOMBIE_SPAWN_INTERVAL,
+  zombiesToSpawn: CONFIG.WAVE_ZOMBIES,
+  spawnInterval: CONFIG.SPAWN_INTERVAL,
   lastSpawnTime: 0,
   waveActive: false,
 
@@ -91,11 +101,11 @@ let gameState = {
   difficulty: "normal",
   wordHints: true,
   screenShake: true,
+  particlesEnabled: true,
 };
 
-// Word Database (500+ 5-letter words)
+// Word Database (300+ 5-letter words)
 const WORD_DATABASE = [
-  // Common words
   "ABOUT",
   "ABOVE",
   "ABUSE",
@@ -584,7 +594,7 @@ const WORD_DATABASE = [
   "ZEBRA",
 ];
 
-// Weapon Definitions
+// Weapons
 const WEAPONS = {
   pistol: {
     name: "Pixel Pistol",
@@ -643,7 +653,7 @@ const WEAPONS = {
   },
 };
 
-// Skin Definitions
+// Skins
 const SKINS = {
   default: {
     name: "Default Agent",
@@ -683,138 +693,160 @@ const SKINS = {
   },
 };
 
-// DOM Elements Cache
+// DOM Elements
 let elements = {};
 let canvas, ctx;
 
 // Initialize Game
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🎮 Zombie Typing Shooter Pro Edition Initializing...");
+  console.log("🎮 Zombie Typing Shooter - Fixed UI/UX");
 
-  initializeElements();
   initializeGame();
+});
+
+// Initialize Game
+function initializeGame() {
+  initializeElements();
+  loadGameData();
   setupEventListeners();
 
-  // Simulate loading
+  // Start loading simulation
   simulateLoading();
-});
+}
 
 // Initialize DOM Elements
 function initializeElements() {
-  // Cache frequently used elements
+  // Cache elements
   elements = {
-    // Screens
-    loadingScreen: document.getElementById("loading-screen"),
+    // Game Elements
     gameContainer: document.getElementById("game-container"),
+    gameCanvas: document.getElementById("game-canvas"),
+
+    // Loading Screen
+    loadingScreen: document.getElementById("loading-screen"),
+    loadingBar: document.getElementById("loading-bar"),
+    loadingTip: document.getElementById("loading-tip"),
+
+    // HUD Elements
+    healthBar: document.getElementById("health-bar"),
+    healthHearts: document.getElementById("health-hearts"),
+    scoreValue: document.getElementById("score-value"),
+    waveValue: document.getElementById("wave-value"),
+    coinsValue: document.getElementById("coins-value"),
+    comboValue: document.getElementById("combo-value"),
+    accuracyValue: document.getElementById("accuracy-value"),
+    killsCount: document.getElementById("kills-count"),
+    wordsCount: document.getElementById("words-count"),
+    streakCount: document.getElementById("streak-count"),
+
+    // Typing Elements
+    wordInput: document.getElementById("word-input"),
+    wordPreview: document.getElementById("word-preview"),
+    currentLength: document.getElementById("current-length"),
+
+    // Zombie List
+    zombieList: document.getElementById("zombie-list"),
+    zombieCount: document.getElementById("zombie-count"),
+
+    // Notifications
+    notificationsContainer: document.getElementById("notifications-container"),
+
+    // Weapon Display
+    weaponIcon: document.getElementById("weapon-icon"),
+    weaponName: document.getElementById("weapon-name"),
+
+    // Menus
     mainMenu: document.getElementById("main-menu"),
     pauseMenu: document.getElementById("pause-menu"),
     gameOver: document.getElementById("game-over"),
-    weaponShop: document.getElementById("weapon-shop-screen"),
-    skinShop: document.getElementById("skin-shop-screen"),
-    howToPlay: document.getElementById("how-to-play-screen"),
-    settingsScreen: document.getElementById("settings-screen"),
+    weaponShop: document.getElementById("weapon-shop"),
+    skinShop: document.getElementById("skin-shop"),
+    howToPlay: document.getElementById("how-to-play"),
+    settings: document.getElementById("settings"),
 
-    // Game UI
-    currentScore: document.getElementById("current-score"),
-    currentWave: document.getElementById("current-wave"),
-    currentCoins: document.getElementById("current-coins"),
-    letterCount: document.getElementById("letter-count"),
-    accuracyRate: document.getElementById("accuracy-rate"),
-    comboCount: document.getElementById("combo-count"),
-    wordInput: document.getElementById("word-input"),
-    typedDisplay: document.getElementById("typed-display"),
-    zombiesList: document.getElementById("zombies-list"),
-    notificationsArea: document.getElementById("notifications-area"),
+    // High Score
+    highScoreDisplay: document.getElementById("high-score-display"),
 
-    // Menu Elements
-    highScoreValue: document.getElementById("high-score-value"),
-    shopCoinsDisplay: document.getElementById("shop-coins-display"),
-    skinShopCoinsDisplay: document.getElementById("skin-shop-coins-display"),
+    // Game Over Stats
+    finalScoreValue: document.getElementById("final-score-value"),
+    finalWaveValue: document.getElementById("final-wave-value"),
+    finalKillsValue: document.getElementById("final-kills-value"),
+    finalWordsValue: document.getElementById("final-words-value"),
+    finalAccuracyValue: document.getElementById("final-accuracy-value"),
+    finalCoinsValue: document.getElementById("final-coins-value"),
+    finalComboValue: document.getElementById("final-combo-value"),
+    newHighScore: document.getElementById("new-high-score"),
 
-    // Settings
+    // Shop Elements
+    weaponShopCoins: document.getElementById("weapon-shop-coins"),
+    skinShopCoins: document.getElementById("skin-shop-coins"),
+    weaponItemsGrid: document.getElementById("weapon-items-grid"),
+    skinItemsGrid: document.getElementById("skin-items-grid"),
+    currentWeaponDisplay: document.getElementById("current-weapon-display"),
+    currentSkinDisplay: document.getElementById("current-skin-display"),
+
+    // Settings Elements
     masterVolume: document.getElementById("master-volume"),
     masterVolumeValue: document.getElementById("master-volume-value"),
     sfxVolume: document.getElementById("sfx-volume"),
     sfxVolumeValue: document.getElementById("sfx-volume-value"),
     difficulty: document.getElementById("difficulty"),
     wordHints: document.getElementById("word-hints"),
+    screenShake: document.getElementById("screen-shake"),
+    particles: document.getElementById("particles"),
+    visualQuality: document.getElementById("visual-quality"),
+    inputSensitivity: document.getElementById("input-sensitivity"),
+    soundEffects: document.getElementById("sound-effects"),
   };
 
   // Initialize canvas
-  canvas = document.getElementById("game-canvas");
+  canvas = elements.gameCanvas;
   ctx = canvas.getContext("2d");
   canvas.width = CONFIG.CANVAS_WIDTH;
   canvas.height = CONFIG.CANVAS_HEIGHT;
 }
 
-// Initialize Game State
-function initializeGame() {
-  console.log("📊 Initializing game state...");
-
-  // Load saved data
-  loadGameData();
-
-  // Initialize UI
-  updateHighScore();
-  updateHeartsDisplay();
-
-  // Set initial screen
-  showScreen("loading");
-
-  console.log("✅ Game initialized");
-}
-
-// Simulate Loading
-function simulateLoading() {
-  const progressBar = document.querySelector(".loading-progress-bar");
-  let progress = 0;
-
-  const interval = setInterval(() => {
-    progress += 2;
-    if (progress > 100) {
-      progress = 100;
-      clearInterval(interval);
-
-      // Loading complete
-      setTimeout(() => {
-        showScreen("main-menu");
-        elements.loadingScreen.style.display = "none";
-        elements.gameContainer.style.display = "block";
-      }, 500);
-    }
-    progressBar.style.width = `${progress}%`;
-  }, 30);
-}
-
 // Load Game Data
 function loadGameData() {
   try {
-    gameState.highScore = parseInt(localStorage.getItem("zts_highScore")) || 0;
-    gameState.coins = parseInt(localStorage.getItem("zts_coins")) || 0;
-    gameState.activeGun = localStorage.getItem("zts_activeGun") || "pistol";
-    gameState.activeSkin = localStorage.getItem("zts_activeSkin") || "default";
-    gameState.ownedGuns = JSON.parse(localStorage.getItem("zts_ownedGuns")) || [
-      "pistol",
-    ];
-    gameState.ownedSkins = JSON.parse(
+    // Load from localStorage
+    GameState.highScore = parseInt(localStorage.getItem("zts_highScore")) || 0;
+    GameState.coins = parseInt(localStorage.getItem("zts_coins")) || 0;
+    GameState.activeWeapon =
+      localStorage.getItem("zts_activeWeapon") || "pistol";
+    GameState.activeSkin = localStorage.getItem("zts_activeSkin") || "default";
+    GameState.ownedWeapons = JSON.parse(
+      localStorage.getItem("zts_ownedWeapons"),
+    ) || ["pistol"];
+    GameState.ownedSkins = JSON.parse(
       localStorage.getItem("zts_ownedSkins"),
     ) || ["default"];
 
     // Load settings
-    gameState.masterVolume =
+    GameState.masterVolume =
       parseFloat(localStorage.getItem("zts_masterVolume")) || 0.8;
-    gameState.sfxVolume =
+    GameState.sfxVolume =
       parseFloat(localStorage.getItem("zts_sfxVolume")) || 0.9;
-    gameState.difficulty = localStorage.getItem("zts_difficulty") || "normal";
-    gameState.wordHints = localStorage.getItem("zts_wordHints") !== "false";
+    GameState.difficulty = localStorage.getItem("zts_difficulty") || "normal";
+    GameState.wordHints = localStorage.getItem("zts_wordHints") !== "false";
+    GameState.screenShake = localStorage.getItem("zts_screenShake") !== "false";
+    GameState.particlesEnabled =
+      localStorage.getItem("zts_particles") !== "false";
 
-    // Update UI
-    elements.masterVolume.value = gameState.masterVolume * 100;
-    elements.masterVolumeValue.textContent = `${Math.round(gameState.masterVolume * 100)}%`;
-    elements.sfxVolume.value = gameState.sfxVolume * 100;
-    elements.sfxVolumeValue.textContent = `${Math.round(gameState.sfxVolume * 100)}%`;
-    elements.difficulty.value = gameState.difficulty;
-    elements.wordHints.checked = gameState.wordHints;
+    // Update UI with loaded values
+    updateHighScore();
+    elements.highScoreDisplay.textContent = GameState.highScore;
+
+    // Update settings UI
+    elements.masterVolume.value = GameState.masterVolume * 100;
+    elements.masterVolumeValue.textContent = `${Math.round(GameState.masterVolume * 100)}%`;
+    elements.sfxVolume.value = GameState.sfxVolume * 100;
+    elements.sfxVolumeValue.textContent = `${Math.round(GameState.sfxVolume * 100)}%`;
+    elements.difficulty.value = GameState.difficulty;
+    elements.wordHints.checked = GameState.wordHints;
+    elements.screenShake.checked = GameState.screenShake;
+    elements.particles.checked = GameState.particlesEnabled;
+    elements.soundEffects.checked = GameState.sfxVolume > 0;
 
     console.log("💾 Game data loaded");
   } catch (error) {
@@ -825,20 +857,25 @@ function loadGameData() {
 // Save Game Data
 function saveGameData() {
   try {
-    localStorage.setItem("zts_highScore", gameState.highScore);
-    localStorage.setItem("zts_coins", gameState.coins);
-    localStorage.setItem("zts_activeGun", gameState.activeGun);
-    localStorage.setItem("zts_activeSkin", gameState.activeSkin);
-    localStorage.setItem("zts_ownedGuns", JSON.stringify(gameState.ownedGuns));
+    localStorage.setItem("zts_highScore", GameState.highScore);
+    localStorage.setItem("zts_coins", GameState.coins);
+    localStorage.setItem("zts_activeWeapon", GameState.activeWeapon);
+    localStorage.setItem("zts_activeSkin", GameState.activeSkin);
+    localStorage.setItem(
+      "zts_ownedWeapons",
+      JSON.stringify(GameState.ownedWeapons),
+    );
     localStorage.setItem(
       "zts_ownedSkins",
-      JSON.stringify(gameState.ownedSkins),
+      JSON.stringify(GameState.ownedSkins),
     );
 
-    localStorage.setItem("zts_masterVolume", gameState.masterVolume);
-    localStorage.setItem("zts_sfxVolume", gameState.sfxVolume);
-    localStorage.setItem("zts_difficulty", gameState.difficulty);
-    localStorage.setItem("zts_wordHints", gameState.wordHints);
+    localStorage.setItem("zts_masterVolume", GameState.masterVolume);
+    localStorage.setItem("zts_sfxVolume", GameState.sfxVolume);
+    localStorage.setItem("zts_difficulty", GameState.difficulty);
+    localStorage.setItem("zts_wordHints", GameState.wordHints);
+    localStorage.setItem("zts_screenShake", GameState.screenShake);
+    localStorage.setItem("zts_particles", GameState.particlesEnabled);
 
     console.log("💾 Game data saved");
   } catch (error) {
@@ -846,11 +883,49 @@ function saveGameData() {
   }
 }
 
+// Simulate Loading
+function simulateLoading() {
+  const tips = [
+    "Loading zombie database...",
+    "Initializing typing engine...",
+    "Preparing pixel graphics...",
+    "Loading sound effects...",
+    "Almost ready to type!",
+  ];
+
+  let progress = 0;
+  let tipIndex = 0;
+
+  const interval = setInterval(() => {
+    progress += Math.random() * 10 + 5;
+
+    // Update loading tip
+    if (progress > tipIndex * 20 && tipIndex < tips.length) {
+      elements.loadingTip.textContent = tips[tipIndex];
+      tipIndex++;
+    }
+
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(interval);
+
+      // Loading complete
+      setTimeout(() => {
+        showScreen("main-menu");
+        elements.loadingScreen.classList.remove("active");
+        elements.gameContainer.classList.remove("hidden");
+      }, 500);
+    }
+
+    elements.loadingBar.style.width = `${progress}%`;
+  }, 100);
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   console.log("🎯 Setting up event listeners...");
 
-  // Game control buttons
+  // Game Control Buttons
   document.getElementById("start-game").addEventListener("click", startNewGame);
   document
     .getElementById("continue-game")
@@ -859,9 +934,31 @@ function setupEventListeners() {
   document
     .getElementById("restart-game")
     .addEventListener("click", restartGame);
-  document.getElementById("play-again").addEventListener("click", startNewGame);
+  document
+    .getElementById("play-again-btn")
+    .addEventListener("click", startNewGame);
 
-  // Navigation buttons
+  // Navigation Buttons
+  document
+    .getElementById("main-menu-btn")
+    .addEventListener("click", showMainMenu);
+  document
+    .getElementById("game-over-menu-btn")
+    .addEventListener("click", showMainMenu);
+  document
+    .getElementById("back-from-weapons")
+    .addEventListener("click", showMainMenu);
+  document
+    .getElementById("back-from-skins")
+    .addEventListener("click", showMainMenu);
+  document
+    .getElementById("back-from-tutorial")
+    .addEventListener("click", showMainMenu);
+  document
+    .getElementById("back-from-settings")
+    .addEventListener("click", showMainMenu);
+
+  // Shop Navigation
   document
     .getElementById("weapon-shop")
     .addEventListener("click", () => showScreen("weapon-shop"));
@@ -874,68 +971,45 @@ function setupEventListeners() {
   document
     .getElementById("settings")
     .addEventListener("click", () => showScreen("settings"));
+
+  // Tutorial Navigation
   document
-    .getElementById("pause-to-menu")
-    .addEventListener("click", returnToMenu);
+    .getElementById("prev-tutorial")
+    .addEventListener("click", prevTutorialStep);
   document
-    .getElementById("game-over-to-menu")
-    .addEventListener("click", returnToMenu);
-  document
-    .getElementById("back-from-weapons")
-    .addEventListener("click", returnToMenu);
-  document
-    .getElementById("back-from-skins")
-    .addEventListener("click", returnToMenu);
-  document
-    .getElementById("back-from-help")
-    .addEventListener("click", returnToMenu);
-  document
-    .getElementById("back-from-settings")
-    .addEventListener("click", returnToMenu);
+    .getElementById("next-tutorial")
+    .addEventListener("click", nextTutorialStep);
 
   // Settings
   document
     .getElementById("save-settings")
     .addEventListener("click", saveSettings);
+  document
+    .getElementById("reset-settings")
+    .addEventListener("click", resetSettings);
+  document
+    .getElementById("share-score-btn")
+    .addEventListener("click", shareScore);
+
+  // Volume Sliders
   elements.masterVolume.addEventListener("input", updateVolumeDisplay);
   elements.sfxVolume.addEventListener("input", updateVolumeDisplay);
 
-  // Word input handling
+  // Word Input
   elements.wordInput.addEventListener("input", handleWordInput);
   elements.wordInput.addEventListener("keydown", handleWordKeydown);
 
-  // Global keyboard shortcuts
-  document.addEventListener("keydown", (e) => {
-    // Pause with ESC
-    if (e.key === "Escape" && gameState.gameActive) {
-      pauseGame();
-      return;
-    }
-
-    // Resume with ESC from pause
-    if (e.key === "Escape" && gameState.screen === "pause") {
-      resumeGame();
-      return;
-    }
-
-    // Focus input when typing letters during gameplay
-    if (
-      gameState.gameActive &&
-      /^[a-zA-Z]$/.test(e.key) &&
-      document.activeElement !== elements.wordInput
-    ) {
-      elements.wordInput.focus();
-    }
-
-    // Mute music with M
-    if (e.key === "m" || e.key === "M") {
-      toggleMusic();
-    }
+  // Tutorial Tabs
+  document.querySelectorAll(".tab-btn").forEach((tab) => {
+    tab.addEventListener("click", switchSettingsTab);
   });
+
+  // Global Keyboard Shortcuts
+  document.addEventListener("keydown", handleGlobalKeydown);
 
   // Click to focus input
   canvas.addEventListener("click", () => {
-    if (gameState.gameActive) {
+    if (GameState.gameActive) {
       elements.wordInput.focus();
     }
   });
@@ -953,13 +1027,13 @@ function showScreen(screenName) {
   });
 
   // Update game state
-  gameState.screen = screenName;
+  GameState.currentScreen = screenName;
 
   // Show requested screen
   switch (screenName) {
     case "main-menu":
+      updateMainMenu();
       elements.mainMenu.classList.add("active");
-      updateShopDisplays();
       break;
     case "game":
       // Game is rendered on canvas
@@ -973,18 +1047,18 @@ function showScreen(screenName) {
       elements.gameOver.classList.add("active");
       break;
     case "weapon-shop":
-      loadWeaponShop();
+      updateWeaponShop();
       elements.weaponShop.classList.add("active");
       break;
     case "skin-shop":
-      loadSkinShop();
+      updateSkinShop();
       elements.skinShop.classList.add("active");
       break;
     case "how-to-play":
       elements.howToPlay.classList.add("active");
       break;
     case "settings":
-      elements.settingsScreen.classList.add("active");
+      elements.settings.classList.add("active");
       break;
   }
 
@@ -994,17 +1068,213 @@ function showScreen(screenName) {
   }
 }
 
+// Update Main Menu
+function updateMainMenu() {
+  elements.highScoreDisplay.textContent = GameState.highScore;
+}
+
+// Update Pause Stats
+function updatePauseStats() {
+  document.getElementById("pause-wave-value").textContent = GameState.wave;
+  document.getElementById("pause-kills-value").textContent =
+    GameState.zombiesKilled;
+  document.getElementById("pause-coins-value").textContent = GameState.coins;
+
+  const accuracy =
+    GameState.wordsTyped > 0
+      ? Math.round((GameState.wordsCorrect / GameState.wordsTyped) * 100)
+      : 100;
+  document.getElementById("pause-accuracy-value").textContent = `${accuracy}%`;
+}
+
+// Update Game Over Stats
+function updateGameOverStats() {
+  elements.finalScoreValue.textContent = GameState.score;
+  elements.finalWaveValue.textContent = GameState.wave;
+  elements.finalKillsValue.textContent = GameState.zombiesKilled;
+  elements.finalWordsValue.textContent = GameState.wordsTyped;
+
+  const accuracy =
+    GameState.wordsTyped > 0
+      ? Math.round((GameState.wordsCorrect / GameState.wordsTyped) * 100)
+      : 100;
+  elements.finalAccuracyValue.textContent = `${accuracy}%`;
+  elements.finalCoinsValue.textContent = GameState.coins;
+  elements.finalComboValue.textContent = `x${GameState.maxCombo}`;
+
+  // Show new high score if achieved
+  if (GameState.score > GameState.highScore) {
+    elements.newHighScore.style.display = "flex";
+  } else {
+    elements.newHighScore.style.display = "none";
+  }
+}
+
+// Update Weapon Shop
+function updateWeaponShop() {
+  elements.weaponShopCoins.textContent = GameState.coins;
+
+  // Update current weapon display
+  const currentWeapon = WEAPONS[GameState.activeWeapon];
+  elements.currentWeaponDisplay.innerHTML = `
+        <div class="equipment-icon" style="color: ${currentWeapon.color}">
+            <i class="${currentWeapon.icon}"></i>
+        </div>
+        <div class="equipment-info">
+            <div class="equipment-name">${currentWeapon.name}</div>
+            <div class="equipment-status">EQUIPPED</div>
+        </div>
+    `;
+
+  // Clear and reload weapon grid
+  elements.weaponItemsGrid.innerHTML = "";
+
+  Object.entries(WEAPONS).forEach(([id, weapon]) => {
+    const isOwned = GameState.ownedWeapons.includes(id);
+    const isEquipped = GameState.activeWeapon === id;
+
+    const item = document.createElement("div");
+    item.className = `shop-item ${isOwned ? "owned" : ""} ${isEquipped ? "equipped" : ""}`;
+    item.innerHTML = `
+            <div class="item-icon" style="color: ${weapon.color}">
+                <i class="${weapon.icon}"></i>
+            </div>
+            <div class="item-name">${weapon.name}</div>
+            <div class="item-cost ${weapon.cost === 0 ? "free" : ""}">
+                ${weapon.cost === 0 ? "FREE" : `<i class="fas fa-coins"></i> ${weapon.cost}`}
+            </div>
+            <div class="item-stats">
+                <div class="item-stat">
+                    <span>Damage</span>
+                    <span class="item-stat-value">${weapon.damage}/3</span>
+                </div>
+                <div class="item-stat">
+                    <span>Fire Rate</span>
+                    <span class="item-stat-value">${weapon.fireRate}/2</span>
+                </div>
+            </div>
+            ${isOwned ? '<div class="item-owned">OWNED</div>' : ""}
+            ${isEquipped ? '<div class="item-equipped">EQUIPPED</div>' : ""}
+        `;
+
+    item.addEventListener("click", () => handleWeaponPurchase(id));
+    elements.weaponItemsGrid.appendChild(item);
+  });
+}
+
+// Update Skin Shop
+function updateSkinShop() {
+  elements.skinShopCoins.textContent = GameState.coins;
+
+  // Update current skin display
+  const currentSkin = SKINS[GameState.activeSkin];
+  elements.currentSkinDisplay.innerHTML = `
+        <div class="equipment-icon" style="color: ${currentSkin.color}">
+            <i class="${currentSkin.icon}"></i>
+        </div>
+        <div class="equipment-info">
+            <div class="equipment-name">${currentSkin.name}</div>
+            <div class="equipment-status">EQUIPPED</div>
+        </div>
+    `;
+
+  // Clear and reload skin grid
+  elements.skinItemsGrid.innerHTML = "";
+
+  Object.entries(SKINS).forEach(([id, skin]) => {
+    const isOwned = GameState.ownedSkins.includes(id);
+    const isEquipped = GameState.activeSkin === id;
+
+    const item = document.createElement("div");
+    item.className = `shop-item ${isOwned ? "owned" : ""} ${isEquipped ? "equipped" : ""}`;
+    item.innerHTML = `
+            <div class="item-icon" style="color: ${skin.color}">
+                <i class="${skin.icon}"></i>
+            </div>
+            <div class="item-name">${skin.name}</div>
+            <div class="item-cost ${skin.cost === 0 ? "free" : ""}">
+                ${skin.cost === 0 ? "FREE" : `<i class="fas fa-coins"></i> ${skin.cost}`}
+            </div>
+            ${isOwned ? '<div class="item-owned">OWNED</div>' : ""}
+            ${isEquipped ? '<div class="item-equipped">EQUIPPED</div>' : ""}
+        `;
+
+    item.addEventListener("click", () => handleSkinPurchase(id));
+    elements.skinItemsGrid.appendChild(item);
+  });
+}
+
+// Handle Weapon Purchase
+function handleWeaponPurchase(weaponId) {
+  const weapon = WEAPONS[weaponId];
+
+  if (GameState.ownedWeapons.includes(weaponId)) {
+    // Already owned, equip it
+    GameState.activeWeapon = weaponId;
+    saveGameData();
+    updateWeaponDisplay();
+    showNotification(`${weapon.name} equipped!`, "info");
+    updateWeaponShop();
+  } else if (GameState.coins >= weapon.cost) {
+    // Purchase weapon
+    GameState.coins -= weapon.cost;
+    GameState.ownedWeapons.push(weaponId);
+    GameState.activeWeapon = weaponId;
+
+    saveGameData();
+    updateCoinsDisplay();
+    updateWeaponDisplay();
+    updateWeaponShop();
+
+    showNotification(`${weapon.name} purchased!`, "coin");
+  } else {
+    // Not enough coins
+    showNotification(
+      `Need ${weapon.cost - GameState.coins} more coins!`,
+      "error",
+    );
+  }
+}
+
+// Handle Skin Purchase
+function handleSkinPurchase(skinId) {
+  const skin = SKINS[skinId];
+
+  if (GameState.ownedSkins.includes(skinId)) {
+    // Already owned, equip it
+    GameState.activeSkin = skinId;
+    saveGameData();
+    showNotification(`${skin.name} equipped!`, "info");
+    updateSkinShop();
+  } else if (GameState.coins >= skin.cost) {
+    // Purchase skin
+    GameState.coins -= skin.cost;
+    GameState.ownedSkins.push(skinId);
+    GameState.activeSkin = skinId;
+
+    saveGameData();
+    updateCoinsDisplay();
+    updateSkinShop();
+
+    showNotification(`${skin.name} purchased!`, "coin");
+  } else {
+    // Not enough coins
+    showNotification(
+      `Need ${skin.cost - GameState.coins} more coins!`,
+      "error",
+    );
+  }
+}
+
 // Start New Game
 function startNewGame() {
-  console.log("🚀 Starting new game...");
-
   resetGameState();
   startGame();
 }
 
-// Continue Game (from pause)
+// Continue Game
 function continueGame() {
-  if (!gameState.gameActive) {
+  if (!GameState.gameActive) {
     startNewGame();
   } else {
     resumeGame();
@@ -1013,8 +1283,8 @@ function continueGame() {
 
 // Start Game
 function startGame() {
-  gameState.gameActive = true;
-  gameState.screen = "game";
+  GameState.gameActive = true;
+  GameState.currentScreen = "game";
 
   // Start wave
   startWave();
@@ -1023,27 +1293,28 @@ function startGame() {
   setTimeout(() => {
     elements.wordInput.focus();
     elements.wordInput.value = "";
+    updateWordPreview();
   }, 100);
 
   // Start game loop
   requestAnimationFrame(gameLoop);
 
   // Show notification
-  showNotification("Game started! Kill zombies with words!", "info");
+  showNotification("Game started! Type zombie words to shoot!", "info");
 
   console.log("✅ Game started");
 }
 
 // Pause Game
 function pauseGame() {
-  gameState.gameActive = false;
+  GameState.gameActive = false;
   showScreen("pause");
 }
 
 // Resume Game
 function resumeGame() {
-  gameState.gameActive = true;
-  gameState.screen = "game";
+  GameState.gameActive = true;
+  GameState.currentScreen = "game";
 
   // Focus input
   setTimeout(() => {
@@ -1060,9 +1331,9 @@ function restartGame() {
   startGame();
 }
 
-// Return to Main Menu
-function returnToMenu() {
-  gameState.gameActive = false;
+// Show Main Menu
+function showMainMenu() {
+  GameState.gameActive = false;
   showScreen("main-menu");
 }
 
@@ -1071,89 +1342,84 @@ function resetGameState() {
   console.log("🔄 Resetting game state...");
 
   // Reset stats
-  gameState.health = CONFIG.PLAYER_START_HEALTH;
-  gameState.score = 0;
-  gameState.wave = 1;
-  gameState.zombiesKilled = 0;
-  gameState.wordsTyped = 0;
-  gameState.wordsCorrect = 0;
-  gameState.currentCombo = 0;
-  gameState.killStreak = 0;
-  gameState.lastKillTime = 0;
+  GameState.health = CONFIG.PLAYER_HEALTH;
+  GameState.maxHealth = CONFIG.PLAYER_HEALTH;
+  GameState.score = 0;
+  GameState.wave = 1;
+  GameState.zombiesKilled = 0;
+  GameState.wordsTyped = 0;
+  GameState.wordsCorrect = 0;
+  GameState.currentCombo = 1;
+  GameState.maxCombo = 1;
+  GameState.killStreak = 0;
+  GameState.lastKillTime = 0;
 
   // Reset input
-  gameState.currentInput = "";
-  gameState.wordMatches = [];
+  GameState.currentInput = "";
+  GameState.wordMatches = [];
 
   // Clear game objects
-  gameState.zombies = [];
-  gameState.bullets = [];
-  gameState.particles = [];
-  gameState.coins = [];
-  gameState.effects = [];
-  gameState.notifications = [];
+  GameState.zombies = [];
+  GameState.bullets = [];
+  GameState.particles = [];
+  GameState.coins = [];
+  GameState.notifications = [];
 
   // Reset wave
-  gameState.waveStartTime = 0;
-  gameState.zombiesSpawned = 0;
-  gameState.zombiesToSpawn = CONFIG.WAVE_ZOMBIE_COUNT;
-  gameState.spawnInterval = CONFIG.ZOMBIE_SPAWN_INTERVAL;
-  gameState.lastSpawnTime = 0;
-  gameState.waveActive = false;
+  GameState.waveStartTime = 0;
+  GameState.zombiesSpawned = 0;
+  GameState.zombiesToSpawn = CONFIG.WAVE_ZOMBIES;
+  GameState.spawnInterval = CONFIG.SPAWN_INTERVAL;
+  GameState.lastSpawnTime = 0;
+  GameState.waveActive = false;
 
   // Update UI
+  updateHealthDisplay();
   updateScoreDisplay();
   updateWaveDisplay();
   updateCoinsDisplay();
-  updateAccuracyDisplay();
   updateComboDisplay();
-  updateHeartsDisplay();
-  updateZombiesList();
+  updateAccuracyDisplay();
+  updateStatsDisplay();
+  updateZombieList();
+  updateWordPreview();
 
   console.log("✅ Game state reset");
 }
 
 // Start Wave
 function startWave() {
-  gameState.waveStartTime = Date.now();
-  gameState.zombiesSpawned = 0;
-  gameState.zombiesToSpawn =
-    CONFIG.WAVE_ZOMBIE_COUNT +
-    (gameState.wave - 1) * CONFIG.WAVE_ZOMBIE_INCREMENT;
-  gameState.spawnInterval = CONFIG.DIFFICULTY[gameState.difficulty].spawn;
-  gameState.waveActive = true;
+  GameState.waveStartTime = Date.now();
+  GameState.zombiesSpawned = 0;
+  GameState.zombiesToSpawn = CONFIG.WAVE_ZOMBIES + (GameState.wave - 1) * 2;
+  GameState.spawnInterval = CONFIG.DIFFICULTY[GameState.difficulty].spawn;
+  GameState.waveActive = true;
 
-  // Update wave display
   updateWaveDisplay();
-
-  // Show notification
-  showNotification(`WAVE ${gameState.wave} STARTED!`, "warning");
-
-  // Play sound
-  playSound("wave-start-sound");
+  showNotification(`WAVE ${GameState.wave} STARTED!`, "warning");
 }
 
 // Spawn Zombie
 function spawnZombie() {
   const now = Date.now();
-  if (now - gameState.lastSpawnTime < gameState.spawnInterval) return;
-  if (gameState.zombiesSpawned >= gameState.zombiesToSpawn) return;
+  if (now - GameState.lastSpawnTime < GameState.spawnInterval) return;
+  if (GameState.zombiesSpawned >= GameState.zombiesToSpawn) return;
 
-  gameState.lastSpawnTime = now;
-  gameState.zombiesSpawned++;
+  GameState.lastSpawnTime = now;
+  GameState.zombiesSpawned++;
 
   // Determine zombie type
   let type = "normal";
   const rand = Math.random();
 
-  if (gameState.wave >= 3 && rand < 0.2) {
+  if (GameState.wave >= 3 && rand < 0.2) {
     type = "hard";
   }
 
   // Spawn boss every 5 waves
   if (
-    gameState.wave % 5 === 0 &&
-    gameState.zombies.filter((z) => z.type === "boss").length === 0
+    GameState.wave % 5 === 0 &&
+    GameState.zombies.filter((z) => z.type === "boss").length === 0
   ) {
     type = "boss";
   }
@@ -1162,7 +1428,7 @@ function spawnZombie() {
   const word = WORD_DATABASE[Math.floor(Math.random() * WORD_DATABASE.length)];
 
   // Check word not already in use
-  if (gameState.zombies.some((z) => z.word === word)) {
+  if (GameState.zombies.some((z) => z.word === word)) {
     return; // Try again next frame
   }
 
@@ -1171,13 +1437,11 @@ function spawnZombie() {
     id: Date.now() + Math.random(),
     x: CONFIG.CANVAS_WIDTH,
     y: 100 + Math.random() * (CONFIG.CANVAS_HEIGHT - 200),
-    speed:
-      CONFIG.BASE_ZOMBIE_SPEED * CONFIG.DIFFICULTY[gameState.difficulty].speed,
+    speed: CONFIG.DIFFICULTY[GameState.difficulty].speed,
     word: word,
     type: type,
-    health: type === "boss" ? CONFIG.BOSS_HP : 1,
-    maxHealth: type === "boss" ? CONFIG.BOSS_HP : 1,
-    color: getZombieColor(type),
+    health: type === "boss" ? CONFIG.BOSS_HEALTH : 1,
+    maxHealth: type === "boss" ? CONFIG.BOSS_HEALTH : 1,
     width: type === "boss" ? 48 : 32,
     height: type === "boss" ? 48 : 32,
     lastHit: 0,
@@ -1187,20 +1451,8 @@ function spawnZombie() {
   if (type === "hard") zombie.speed *= 1.5;
   if (type === "boss") zombie.speed *= 0.7;
 
-  gameState.zombies.push(zombie);
-  updateZombiesList();
-}
-
-// Get Zombie Color
-function getZombieColor(type) {
-  switch (type) {
-    case "hard":
-      return "#ffa502"; // Orange
-    case "boss":
-      return "#ff4757"; // Red
-    default:
-      return "#70a1ff"; // Blue
-  }
+  GameState.zombies.push(zombie);
+  updateZombieList();
 }
 
 // Handle Word Input
@@ -1209,17 +1461,13 @@ function handleWordInput(e) {
   const displayValue = value.slice(0, CONFIG.WORD_LENGTH);
 
   elements.wordInput.value = displayValue;
-  elements.typedDisplay.textContent = displayValue;
-  gameState.currentInput = displayValue;
+  GameState.currentInput = displayValue;
 
-  // Update letter count
-  elements.letterCount.textContent = `${displayValue.length}/${CONFIG.WORD_LENGTH}`;
-
-  // Update word matches
+  updateWordPreview();
   updateWordMatches();
 
   // Play typing sound
-  if (displayValue.length > 0 && gameState.currentInput.length > 0) {
+  if (displayValue.length > 0 && GameState.sfxVolume > 0) {
     playSound("type-sound");
   }
 }
@@ -1236,24 +1484,68 @@ function handleWordKeydown(e) {
   }
 }
 
+// Handle Global Keydown
+function handleGlobalKeydown(e) {
+  // Pause with ESC
+  if (e.key === "Escape" && GameState.gameActive) {
+    pauseGame();
+    return;
+  }
+
+  // Resume with ESC from pause
+  if (e.key === "Escape" && GameState.currentScreen === "pause") {
+    resumeGame();
+    return;
+  }
+
+  // Focus input when typing letters during gameplay
+  if (
+    GameState.gameActive &&
+    /^[a-zA-Z]$/.test(e.key) &&
+    document.activeElement !== elements.wordInput
+  ) {
+    elements.wordInput.focus();
+  }
+
+  // Mute with M
+  if (e.key === "m" || e.key === "M") {
+    toggleMute();
+  }
+}
+
+// Update Word Preview
+function updateWordPreview() {
+  const letters = elements.wordPreview.querySelectorAll(".letter");
+  const input = GameState.currentInput;
+
+  letters.forEach((letter, index) => {
+    if (index < input.length) {
+      letter.textContent = input.charAt(index);
+      letter.classList.add("filled");
+    } else {
+      letter.textContent = "";
+      letter.classList.remove("filled");
+    }
+  });
+
+  // Update length display
+  elements.currentLength.textContent = input.length;
+}
+
 // Update Word Matches
 function updateWordMatches() {
-  if (!gameState.wordHints) return;
+  if (!GameState.wordHints) return;
 
-  gameState.wordMatches = gameState.zombies
-    .filter((zombie) => zombie.word.startsWith(gameState.currentInput))
-    .map((zombie) => ({
-      word: zombie.word,
-      type: zombie.type,
-    }));
+  GameState.wordMatches = GameState.zombies
+    .filter((zombie) => zombie.word.startsWith(GameState.currentInput))
+    .map((zombie) => zombie.word);
 
-  // Update zombies list highlighting
-  updateZombiesList();
+  updateZombieList();
 }
 
 // Submit Word
 function submitWord() {
-  const word = gameState.currentInput;
+  const word = GameState.currentInput;
 
   if (word.length !== CONFIG.WORD_LENGTH) {
     showNotification("Word must be 5 letters!", "error");
@@ -1262,15 +1554,15 @@ function submitWord() {
     return;
   }
 
-  gameState.wordsTyped++;
+  GameState.wordsTyped++;
 
   // Check for matching zombie
   let zombieKilled = null;
   let zombieIndex = -1;
 
-  for (let i = 0; i < gameState.zombies.length; i++) {
-    if (gameState.zombies[i].word === word) {
-      zombieKilled = gameState.zombies[i];
+  for (let i = 0; i < GameState.zombies.length; i++) {
+    if (GameState.zombies[i].word === word) {
+      zombieKilled = GameState.zombies[i];
       zombieIndex = i;
       break;
     }
@@ -1278,67 +1570,13 @@ function submitWord() {
 
   if (zombieKilled) {
     // Correct word
-    gameState.wordsCorrect++;
+    GameState.wordsCorrect++;
 
     // Update combo
-    const now = Date.now();
-    if (now - gameState.lastKillTime < 5000) {
-      gameState.killStreak++;
-      gameState.currentCombo = Math.min(
-        5,
-        Math.floor(gameState.killStreak / 2) + 1,
-      );
-    } else {
-      gameState.killStreak = 1;
-      gameState.currentCombo = 1;
-    }
-    gameState.lastKillTime = now;
+    updateCombo();
 
     // Handle kill
-    if (zombieKilled.type === "boss") {
-      // Boss takes damage
-      zombieKilled.health--;
-
-      if (zombieKilled.health <= 0) {
-        // Boss killed
-        gameState.zombies.splice(zombieIndex, 1);
-        createKillEffect(zombieKilled);
-        addScore(CONFIG.SCORE_BOSS * gameState.currentCombo);
-        addCoins(CONFIG.COINS_BOSS);
-        gameState.zombiesKilled++;
-        showNotification(
-          `BOSS KILLED! +${CONFIG.SCORE_BOSS * gameState.currentCombo}`,
-          "boss",
-        );
-      } else {
-        // Boss hit
-        createHitEffect(zombieKilled);
-        addScore(50 * gameState.currentCombo);
-        showNotification(
-          `BOSS HIT! ${zombieKilled.health}/${zombieKilled.maxHealth}`,
-          "warning",
-        );
-      }
-    } else {
-      // Normal or hard zombie killed
-      gameState.zombies.splice(zombieIndex, 1);
-      createKillEffect(zombieKilled);
-
-      const score =
-        zombieKilled.type === "hard" ? CONFIG.SCORE_HARD : CONFIG.SCORE_NORMAL;
-      const coins =
-        zombieKilled.type === "hard" ? CONFIG.COINS_HARD : CONFIG.COINS_NORMAL;
-
-      addScore(score * gameState.currentCombo);
-      addCoins(coins);
-      gameState.zombiesKilled++;
-
-      const typeText = zombieKilled.type === "hard" ? "HARD " : "";
-      showNotification(
-        `${typeText}ZOMBIE KILLED! +${score * gameState.currentCombo}`,
-        "kill",
-      );
-    }
+    handleZombieKill(zombieKilled, zombieIndex);
 
     // Create bullet effect
     createBullet(zombieKilled);
@@ -1347,35 +1585,100 @@ function submitWord() {
     playSound("shoot-sound");
   } else {
     // Wrong word
-    gameState.currentCombo = 0;
-    gameState.killStreak = 0;
-
-    // Shake input
+    resetCombo();
+    showNotification("No matching zombie!", "error");
     elements.wordInput.classList.add("shake");
     setTimeout(() => elements.wordInput.classList.remove("shake"), 300);
-
-    showNotification("No matching zombie!", "error");
   }
 
   // Clear input
-  elements.wordInput.value = "";
-  elements.typedDisplay.textContent = "";
-  gameState.currentInput = "";
-  elements.letterCount.textContent = "0/5";
-
-  // Update UI
-  updateScoreDisplay();
-  updateCoinsDisplay();
-  updateAccuracyDisplay();
-  updateComboDisplay();
-  updateZombiesList();
+  clearInput();
 }
 
-// Create Bullet Effect
-function createBullet(target) {
-  const weapon = WEAPONS[gameState.activeGun];
+// Update Combo
+function updateCombo() {
+  const now = Date.now();
 
-  gameState.bullets.push({
+  if (now - GameState.lastKillTime < CONFIG.COMBO_TIMEOUT) {
+    GameState.killStreak++;
+    GameState.currentCombo =
+      CONFIG.COMBO_MULTIPLIERS[Math.min(GameState.killStreak - 1, 4)];
+  } else {
+    GameState.killStreak = 1;
+    GameState.currentCombo = 1;
+  }
+
+  GameState.lastKillTime = now;
+  GameState.maxCombo = Math.max(GameState.maxCombo, GameState.currentCombo);
+
+  updateComboDisplay();
+}
+
+// Reset Combo
+function resetCombo() {
+  GameState.killStreak = 0;
+  GameState.currentCombo = 1;
+  GameState.lastKillTime = 0;
+
+  updateComboDisplay();
+}
+
+// Handle Zombie Kill
+function handleZombieKill(zombie, index) {
+  if (zombie.type === "boss") {
+    // Boss takes damage
+    zombie.health--;
+
+    if (zombie.health <= 0) {
+      // Boss killed
+      GameState.zombies.splice(index, 1);
+      addScore(CONFIG.SCORE.BOSS * GameState.currentCombo);
+      addCoins(CONFIG.COINS.BOSS);
+      GameState.zombiesKilled++;
+      createKillEffect(zombie);
+      showNotification(
+        `BOSS KILLED! +${CONFIG.SCORE.BOSS * GameState.currentCombo}`,
+        "boss",
+      );
+    } else {
+      // Boss hit
+      addScore(CONFIG.SCORE.BOSS_HIT * GameState.currentCombo);
+      createHitEffect(zombie);
+      showNotification(
+        `BOSS HIT! ${zombie.health}/${zombie.maxHealth}`,
+        "warning",
+      );
+      zombie.lastHit = Date.now();
+    }
+  } else {
+    // Normal or hard zombie killed
+    GameState.zombies.splice(index, 1);
+
+    const score =
+      zombie.type === "hard" ? CONFIG.SCORE.HARD : CONFIG.SCORE.NORMAL;
+    const coins =
+      zombie.type === "hard" ? CONFIG.COINS.HARD : CONFIG.COINS.NORMAL;
+
+    addScore(score * GameState.currentCombo);
+    addCoins(coins);
+    GameState.zombiesKilled++;
+    createKillEffect(zombie);
+
+    const typeText = zombie.type === "hard" ? "HARD " : "";
+    showNotification(
+      `${typeText}ZOMBIE KILLED! +${score * GameState.currentCombo}`,
+      "kill",
+    );
+  }
+
+  updateStatsDisplay();
+}
+
+// Create Bullet
+function createBullet(target) {
+  const weapon = WEAPONS[GameState.activeWeapon];
+
+  GameState.bullets.push({
     x: 50,
     y: CONFIG.CANVAS_HEIGHT - 100,
     targetX: target.x + target.width / 2,
@@ -1383,35 +1686,34 @@ function createBullet(target) {
     color: weapon.color,
     progress: 0,
     speed: 0.05 + weapon.fireRate * 0.01,
-    trail: [],
   });
 }
 
 // Create Kill Effect
 function createKillEffect(zombie) {
-  const color = getZombieColor(zombie.type);
-
-  // Create explosion particles
-  for (let i = 0; i < 15; i++) {
-    gameState.particles.push({
-      x: zombie.x + zombie.width / 2,
-      y: zombie.y + zombie.height / 2,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8,
-      size: Math.random() * 3 + 2,
-      color: color,
-      life: 30,
-      decay: 0.9,
-    });
+  // Create particles
+  if (GameState.particlesEnabled) {
+    for (let i = 0; i < 15; i++) {
+      GameState.particles.push({
+        x: zombie.x + zombie.width / 2,
+        y: zombie.y + zombie.height / 2,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        size: Math.random() * 3 + 2,
+        color: getZombieColor(zombie.type),
+        life: 30,
+        decay: 0.9,
+      });
+    }
   }
 
   // Create coins
   const coinCount =
     zombie.type === "boss"
-      ? CONFIG.COINS_BOSS
+      ? CONFIG.COINS.BOSS
       : zombie.type === "hard"
-        ? CONFIG.COINS_HARD
-        : CONFIG.COINS_NORMAL;
+        ? CONFIG.COINS.HARD
+        : CONFIG.COINS.NORMAL;
   createCoinEffect(
     zombie.x + zombie.width / 2,
     zombie.y + zombie.height / 2,
@@ -1419,40 +1721,37 @@ function createKillEffect(zombie) {
   );
 
   // Screen shake
-  if (gameState.screenShake) {
+  if (GameState.screenShake) {
     createScreenShake();
   }
 
-  // Play hit sound
-  playSound("zombie-hit-sound");
+  playSound("hit-sound");
 }
 
 // Create Hit Effect
 function createHitEffect(zombie) {
-  const color = getZombieColor(zombie.type);
-
-  // Create hit particles
-  for (let i = 0; i < 8; i++) {
-    gameState.particles.push({
-      x: zombie.x + zombie.width / 2,
-      y: zombie.y + zombie.height / 2,
-      vx: (Math.random() - 0.5) * 4,
-      vy: (Math.random() - 0.5) * 4,
-      size: Math.random() * 2 + 1,
-      color: color,
-      life: 20,
-      decay: 0.8,
-    });
+  if (GameState.particlesEnabled) {
+    for (let i = 0; i < 8; i++) {
+      GameState.particles.push({
+        x: zombie.x + zombie.width / 2,
+        y: zombie.y + zombie.height / 2,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+        size: Math.random() * 2 + 1,
+        color: getZombieColor(zombie.type),
+        life: 20,
+        decay: 0.8,
+      });
+    }
   }
 
-  // Play hit sound
-  playSound("zombie-hit-sound");
+  playSound("hit-sound");
 }
 
 // Create Coin Effect
 function createCoinEffect(x, y, count) {
   for (let i = 0; i < count; i++) {
-    gameState.coins.push({
+    GameState.coins.push({
       x: x + Math.random() * 20 - 10,
       y: y + Math.random() * 20 - 10,
       vx: (Math.random() - 0.5) * 3,
@@ -1478,48 +1777,150 @@ function createScreenShake() {
   }, 100);
 }
 
-// Update Zombies List
-function updateZombiesList() {
-  const zombiesList = elements.zombiesList;
-  zombiesList.innerHTML = "";
+// Get Zombie Color
+function getZombieColor(type) {
+  switch (type) {
+    case "hard":
+      return "#ffa502";
+    case "boss":
+      return "#ff4757";
+    default:
+      return "#70a1ff";
+  }
+}
 
-  if (gameState.zombies.length === 0) {
-    zombiesList.innerHTML =
-      '<div class="empty-message">No zombies yet. Type words to spawn them!</div>';
+// Clear Input
+function clearInput() {
+  elements.wordInput.value = "";
+  GameState.currentInput = "";
+  updateWordPreview();
+  updateWordMatches();
+}
+
+// Add Score
+function addScore(amount) {
+  GameState.score += amount;
+  updateScoreDisplay();
+}
+
+// Add Coins
+function addCoins(amount) {
+  GameState.coins += amount;
+  updateCoinsDisplay();
+}
+
+// Update UI Displays
+function updateHealthDisplay() {
+  const healthPercent = (GameState.health / GameState.maxHealth) * 100;
+  elements.healthBar.style.width = `${healthPercent}%`;
+
+  // Update hearts
+  elements.healthHearts.innerHTML = "";
+  for (let i = 0; i < GameState.maxHealth; i++) {
+    const heart = document.createElement("i");
+    heart.className = "fas fa-heart";
+    heart.style.color = i < GameState.health ? "#ff4757" : "#444";
+    elements.healthHearts.appendChild(heart);
+  }
+}
+
+function updateScoreDisplay() {
+  elements.scoreValue.textContent = GameState.score.toString().padStart(7, "0");
+}
+
+function updateWaveDisplay() {
+  elements.waveValue.textContent = GameState.wave.toString().padStart(2, "0");
+}
+
+function updateCoinsDisplay() {
+  elements.coinsValue.textContent = GameState.coins.toString().padStart(3, "0");
+}
+
+function updateComboDisplay() {
+  elements.comboValue.textContent = GameState.currentCombo;
+
+  // Show/hide combo display
+  const comboDisplay = document.getElementById("combo-display");
+  if (GameState.currentCombo > 1) {
+    comboDisplay.style.display = "flex";
+  } else {
+    comboDisplay.style.display = "none";
+  }
+}
+
+function updateAccuracyDisplay() {
+  const accuracy =
+    GameState.wordsTyped > 0
+      ? Math.round((GameState.wordsCorrect / GameState.wordsTyped) * 100)
+      : 100;
+  elements.accuracyValue.textContent = `${accuracy}%`;
+}
+
+function updateStatsDisplay() {
+  elements.killsCount.textContent = GameState.zombiesKilled;
+  elements.wordsCount.textContent = GameState.wordsTyped;
+  elements.streakCount.textContent = GameState.killStreak;
+
+  updateAccuracyDisplay();
+}
+
+function updateHighScore() {
+  if (GameState.score > GameState.highScore) {
+    GameState.highScore = GameState.score;
+    elements.highScoreDisplay.textContent = GameState.highScore;
+  }
+}
+
+function updateWeaponDisplay() {
+  const weapon = WEAPONS[GameState.activeWeapon];
+  elements.weaponIcon.innerHTML = `<i class="${weapon.icon}"></i>`;
+  elements.weaponIcon.style.color = weapon.color;
+  elements.weaponName.textContent = weapon.name;
+}
+
+function updateZombieList() {
+  const zombieList = elements.zombieList;
+  zombieList.innerHTML = "";
+
+  if (GameState.zombies.length === 0) {
+    zombieList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-ghost"></i>
+                <p>No zombies yet.<br>Start typing to spawn!</p>
+            </div>
+        `;
+    elements.zombieCount.textContent = "0";
     return;
   }
 
-  gameState.zombies.forEach((zombie) => {
-    const item = document.createElement("div");
-    item.className = "zombie-word-item";
+  elements.zombieCount.textContent = GameState.zombies.length;
 
-    // Check if word matches current input
+  GameState.zombies.forEach((zombie) => {
     const isMatching =
-      gameState.wordHints &&
-      gameState.currentInput &&
-      zombie.word.startsWith(gameState.currentInput);
+      GameState.wordHints &&
+      GameState.currentInput &&
+      zombie.word.startsWith(GameState.currentInput);
 
-    if (isMatching) {
-      item.style.borderColor = "var(--primary)";
-      item.style.background = "rgba(0, 255, 157, 0.1)";
-    }
-
+    const item = document.createElement("div");
+    item.className = `zombie-item ${isMatching ? "active" : ""}`;
     item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div class="zombie-type-indicator zombie-type-${zombie.type}"></div>
-                <span>${zombie.word}</span>
-            </div>
-            ${zombie.type === "boss" ? `<small>${zombie.health}/${zombie.maxHealth} HP</small>` : ""}
+            <div class="zombie-type ${zombie.type}"></div>
+            <div class="zombie-word">${zombie.word}</div>
+            ${
+              zombie.type === "boss"
+                ? `<div class="zombie-health">${zombie.health}/${zombie.maxHealth}</div>`
+                : ""
+            }
         `;
 
-    zombiesList.appendChild(item);
+    zombieList.appendChild(item);
   });
 }
 
 // Show Notification
 function showNotification(text, type = "info") {
   const notification = document.createElement("div");
-  notification.className = "notification";
+  notification.className = `notification ${type}`;
 
   let icon = "info-circle";
   switch (type) {
@@ -1538,6 +1939,9 @@ function showNotification(text, type = "info") {
     case "coin":
       icon = "coins";
       break;
+    case "info":
+      icon = "info-circle";
+      break;
   }
 
   notification.innerHTML = `
@@ -1545,7 +1949,7 @@ function showNotification(text, type = "info") {
         <span>${text}</span>
     `;
 
-  elements.notificationsArea.appendChild(notification);
+  elements.notificationsContainer.appendChild(notification);
 
   // Remove after 3 seconds
   setTimeout(() => {
@@ -1558,9 +1962,9 @@ function showNotification(text, type = "info") {
 // Game Loop
 let lastTime = 0;
 function gameLoop(timestamp) {
-  if (!gameState.gameActive) return;
+  if (!GameState.gameActive) return;
 
-  const deltaTime = timestamp - lastTime;
+  const deltaTime = Math.min((timestamp - lastTime) / 16, 2);
   lastTime = timestamp;
 
   // Update game state
@@ -1575,133 +1979,114 @@ function gameLoop(timestamp) {
 
 // Update Game
 function updateGame(deltaTime) {
-  const dt = Math.min(deltaTime / 16, 2); // Normalize delta time
-
-  // Update game time
-  gameState.gameTime += dt;
+  GameState.gameTime += deltaTime;
 
   // Update wave
-  updateWave(dt);
+  updateWaveProgress();
 
   // Spawn zombies
   spawnZombie();
 
   // Update game objects
-  updateZombies(dt);
-  updateBullets(dt);
-  updateParticles(dt);
-  updateCoins(dt);
-  updateEffects(dt);
+  updateZombies(deltaTime);
+  updateBullets(deltaTime);
+  updateParticles(deltaTime);
+  updateCoins(deltaTime);
 
   // Check game over
   checkGameOver();
 }
 
-// Update Wave
-function updateWave(dt) {
-  if (!gameState.waveActive) return;
+// Update Wave Progress
+function updateWaveProgress() {
+  if (!GameState.waveActive) return;
 
-  const waveProgress =
-    (Date.now() - gameState.waveStartTime) / CONFIG.WAVE_DURATION;
+  const elapsed = Date.now() - GameState.waveStartTime;
+  const progress = elapsed / CONFIG.WAVE_DURATION;
 
   // Check if wave should end
-  if (waveProgress >= 1 && gameState.zombies.length === 0) {
+  if (progress >= 1 && GameState.zombies.length === 0) {
     nextWave();
   }
 }
 
 // Next Wave
 function nextWave() {
-  gameState.wave++;
-  gameState.currentCombo = 0;
-  gameState.killStreak = 0;
-
+  GameState.wave++;
+  resetCombo();
   startWave();
-
-  // Update UI
-  updateWaveDisplay();
-
-  // Show notification
-  showNotification(`WAVE ${gameState.wave} STARTED!`, "warning");
 }
 
 // Update Zombies
-function updateZombies(dt) {
-  for (let i = gameState.zombies.length - 1; i >= 0; i--) {
-    const zombie = gameState.zombies[i];
+function updateZombies(deltaTime) {
+  for (let i = GameState.zombies.length - 1; i >= 0; i--) {
+    const zombie = GameState.zombies[i];
 
     // Move zombie
-    zombie.x -= zombie.speed * dt;
+    zombie.x -= zombie.speed * deltaTime;
 
     // Check if zombie reached player
     if (zombie.x < 50) {
       // Zombie hits player
-      gameState.health--;
-      gameState.zombies.splice(i, 1);
+      GameState.health--;
+      GameState.zombies.splice(i, 1);
 
-      // Create hit effect
       createHitEffect(zombie);
+      updateHealthDisplay();
+      updateZombieList();
 
-      // Update health display
-      updateHeartsDisplay();
-
-      // Show notification
       showNotification("ZOMBIE HIT!", "error");
 
-      // Check game over
-      if (gameState.health <= 0) {
+      if (GameState.health <= 0) {
         gameOver();
       }
 
       continue;
     }
-
-    // Update boss flashing when hit
-    if (zombie.type === "boss" && Date.now() - zombie.lastHit < 200) {
-      // Boss is flashing from hit
-    }
   }
+
+  updateZombieList();
 }
 
 // Update Bullets
-function updateBullets(dt) {
-  for (let i = gameState.bullets.length - 1; i >= 0; i--) {
-    const bullet = gameState.bullets[i];
-    bullet.progress += bullet.speed * dt;
+function updateBullets(deltaTime) {
+  for (let i = GameState.bullets.length - 1; i >= 0; i--) {
+    const bullet = GameState.bullets[i];
+    bullet.progress += bullet.speed * deltaTime;
 
     if (bullet.progress >= 1) {
-      gameState.bullets.splice(i, 1);
+      GameState.bullets.splice(i, 1);
     }
   }
 }
 
 // Update Particles
-function updateParticles(dt) {
-  for (let i = gameState.particles.length - 1; i >= 0; i--) {
-    const particle = gameState.particles[i];
+function updateParticles(deltaTime) {
+  for (let i = GameState.particles.length - 1; i >= 0; i--) {
+    const particle = GameState.particles[i];
 
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-    particle.vy += 0.1 * dt; // Gravity
+    particle.x += particle.vx * deltaTime;
+    particle.y += particle.vy * deltaTime;
+    particle.vy += 0.1 * deltaTime;
     particle.life--;
 
     if (particle.life <= 0) {
-      gameState.particles.splice(i, 1);
+      GameState.particles.splice(i, 1);
     }
   }
 }
 
 // Update Coins
-function updateCoins(dt) {
-  for (let i = gameState.coins.length - 1; i >= 0; i--) {
-    const coin = gameState.coins[i];
+function updateCoins(deltaTime) {
+  for (let i = GameState.coins.length - 1; i >= 0; i--) {
+    const coin = GameState.coins[i];
 
-    coin.x += coin.vx * dt;
-    coin.y += coin.vy * dt;
-    coin.vy += 0.2 * dt; // Gravity
+    coin.x += coin.vx * deltaTime;
+    coin.y += coin.vy * deltaTime;
+    coin.vy += 0.2 * deltaTime;
     coin.life--;
 
-    // Check if coin collected by player
+    // Check if coin collected
     if (
       !coin.collected &&
       coin.x > 30 &&
@@ -1714,27 +2099,14 @@ function updateCoins(dt) {
     }
 
     if (coin.life <= 0 || coin.collected) {
-      gameState.coins.splice(i, 1);
-    }
-  }
-}
-
-// Update Effects
-function updateEffects(dt) {
-  // Update effects (simplified)
-  for (let i = gameState.effects.length - 1; i >= 0; i--) {
-    const effect = gameState.effects[i];
-    effect.life--;
-
-    if (effect.life <= 0) {
-      gameState.effects.splice(i, 1);
+      GameState.coins.splice(i, 1);
     }
   }
 }
 
 // Check Game Over
 function checkGameOver() {
-  if (gameState.health <= 0) {
+  if (GameState.health <= 0) {
     gameOver();
   }
 }
@@ -1743,19 +2115,13 @@ function checkGameOver() {
 function gameOver() {
   console.log("💀 Game Over!");
 
-  gameState.gameActive = false;
+  GameState.gameActive = false;
 
   // Update high score
-  if (gameState.score > gameState.highScore) {
-    gameState.highScore = gameState.score;
-    updateHighScore();
-    showNotification("NEW HIGH SCORE!", "boss");
-  }
-
-  // Save game data
+  updateHighScore();
   saveGameData();
 
-  // Play game over sound
+  // Play sound
   playSound("game-over-sound");
 
   // Show game over screen
@@ -1768,7 +2134,7 @@ function renderGame() {
   ctx.fillStyle = "#0a0a14";
   ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-  // Draw grid background
+  // Draw background grid
   drawGrid();
 
   // Draw game objects
@@ -1781,10 +2147,12 @@ function renderGame() {
   drawPlayer();
 
   // Draw wave progress
-  drawWaveProgress();
+  if (GameState.waveActive) {
+    drawWaveProgress();
+  }
 }
 
-// Draw Grid Background
+// Draw Grid
 function drawGrid() {
   ctx.strokeStyle = "rgba(74, 74, 109, 0.1)";
   ctx.lineWidth = 1;
@@ -1808,18 +2176,14 @@ function drawGrid() {
 
 // Draw Player
 function drawPlayer() {
-  const skin = SKINS[gameState.activeSkin];
+  const skin = SKINS[GameState.activeSkin];
+  const weapon = WEAPONS[GameState.activeWeapon];
 
-  // Draw player base
+  // Draw player
   ctx.fillStyle = skin.color;
   ctx.fillRect(30, CONFIG.CANVAS_HEIGHT - 100, 40, 60);
 
-  // Draw player details
-  ctx.fillStyle = "#4a4a6d";
-  ctx.fillRect(35, CONFIG.CANVAS_HEIGHT - 95, 30, 50);
-
-  // Draw gun
-  const weapon = WEAPONS[gameState.activeGun];
+  // Draw weapon
   ctx.fillStyle = weapon.color;
   ctx.fillRect(70, CONFIG.CANVAS_HEIGHT - 90, 30, 10);
   ctx.fillRect(95, CONFIG.CANVAS_HEIGHT - 95, 10, 20);
@@ -1827,26 +2191,15 @@ function drawPlayer() {
 
 // Draw Zombies
 function drawZombies() {
-  gameState.zombies.forEach((zombie) => {
+  GameState.zombies.forEach((zombie) => {
     // Draw zombie body
-    ctx.fillStyle = zombie.color;
+    ctx.fillStyle = getZombieColor(zombie.type);
     ctx.fillRect(zombie.x, zombie.y, zombie.width, zombie.height);
 
-    // Draw zombie face (simple)
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(zombie.x + 10, zombie.y + 10, 4, 4); // Left eye
-    ctx.fillRect(zombie.x + zombie.width - 14, zombie.y + 10, 4, 4); // Right eye
-    ctx.fillRect(
-      zombie.x + 10,
-      zombie.y + zombie.height - 15,
-      zombie.width - 20,
-      4,
-    ); // Mouth
-
-    // Draw word above zombie
+    // Draw zombie word
     drawZombieWord(zombie);
 
-    // Draw health bar for boss
+    // Draw boss health bar
     if (zombie.type === "boss") {
       drawBossHealthBar(zombie);
     }
@@ -1855,22 +2208,20 @@ function drawZombies() {
 
 // Draw Zombie Word
 function drawZombieWord(zombie) {
-  const x = zombie.x + zombie.width / 2;
-  const y = zombie.y - 10;
-
-  // Check if word matches current input
   const isMatching =
-    gameState.wordHints &&
-    gameState.currentInput &&
-    zombie.word.startsWith(gameState.currentInput);
+    GameState.wordHints &&
+    GameState.currentInput &&
+    zombie.word.startsWith(GameState.currentInput);
 
-  // Draw word background (speech bubble)
-  ctx.fillStyle = isMatching ? "#ffff00" : "#ffffff";
+  // Draw word background
+  ctx.fillStyle = isMatching
+    ? "rgba(255, 255, 0, 0.9)"
+    : "rgba(255, 255, 255, 0.9)";
   ctx.strokeStyle = isMatching ? "#ffaa00" : "#000000";
   ctx.lineWidth = 2;
 
-  // Calculate text width
-  ctx.font = 'bold 16px "Press Start 2P"';
+  const x = zombie.x + zombie.width / 2;
+  const y = zombie.y - 10;
   const textWidth = ctx.measureText(zombie.word).width;
   const padding = 10;
 
@@ -1880,51 +2231,22 @@ function drawZombieWord(zombie) {
   const rectWidth = textWidth + padding * 2;
   const rectHeight = 25;
 
-  // Rounded rectangle
-  const radius = 5;
-  ctx.beginPath();
-  ctx.moveTo(rectX + radius, rectY);
-  ctx.lineTo(rectX + rectWidth - radius, rectY);
-  ctx.quadraticCurveTo(
-    rectX + rectWidth,
-    rectY,
-    rectX + rectWidth,
-    rectY + radius,
-  );
-  ctx.lineTo(rectX + rectWidth, rectY + rectHeight - radius);
-  ctx.quadraticCurveTo(
-    rectX + rectWidth,
-    rectY + rectHeight,
-    rectX + rectWidth - radius,
-    rectY + rectHeight,
-  );
-  ctx.lineTo(rectX + radius, rectY + rectHeight);
-  ctx.quadraticCurveTo(
-    rectX,
-    rectY + rectHeight,
-    rectX,
-    rectY + rectHeight - radius,
-  );
-  ctx.lineTo(rectX, rectY + radius);
-  ctx.quadraticCurveTo(rectX, rectY, rectX + radius, rectY);
-  ctx.closePath();
-
+  drawRoundedRect(ctx, rectX, rectY, rectWidth, rectHeight, 5);
   ctx.fill();
   ctx.stroke();
 
-  // Draw pointer to zombie
+  // Draw pointer
   ctx.beginPath();
   ctx.moveTo(x, rectY + rectHeight);
   ctx.lineTo(x - 5, rectY + rectHeight + 5);
   ctx.lineTo(x + 5, rectY + rectHeight + 5);
   ctx.closePath();
-  ctx.fillStyle = isMatching ? "#ffff00" : "#ffffff";
-  ctx.strokeStyle = isMatching ? "#ffaa00" : "#000000";
   ctx.fill();
   ctx.stroke();
 
-  // Draw word text
+  // Draw text
   ctx.fillStyle = "#000000";
+  ctx.font = 'bold 16px "Press Start 2P"';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(zombie.word, x, rectY + rectHeight / 2);
@@ -1954,11 +2276,11 @@ function drawBossHealthBar(zombie) {
 
 // Draw Bullets
 function drawBullets() {
-  gameState.bullets.forEach((bullet) => {
+  GameState.bullets.forEach((bullet) => {
     const currentX = bullet.x + (bullet.targetX - bullet.x) * bullet.progress;
     const currentY = bullet.y + (bullet.targetY - bullet.y) * bullet.progress;
 
-    // Draw bullet trail
+    // Draw trail
     ctx.strokeStyle = bullet.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1966,7 +2288,7 @@ function drawBullets() {
     ctx.lineTo(currentX, currentY);
     ctx.stroke();
 
-    // Draw bullet head
+    // Draw bullet
     ctx.fillStyle = bullet.color;
     ctx.beginPath();
     ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
@@ -1976,7 +2298,9 @@ function drawBullets() {
 
 // Draw Particles
 function drawParticles() {
-  gameState.particles.forEach((particle) => {
+  if (!GameState.particlesEnabled) return;
+
+  GameState.particles.forEach((particle) => {
     ctx.fillStyle = particle.color;
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
@@ -1986,7 +2310,7 @@ function drawParticles() {
 
 // Draw Coins
 function drawCoins() {
-  gameState.coins.forEach((coin) => {
+  GameState.coins.forEach((coin) => {
     // Draw coin
     ctx.fillStyle = "#ffd700";
     ctx.beginPath();
@@ -2010,10 +2334,8 @@ function drawCoins() {
 
 // Draw Wave Progress
 function drawWaveProgress() {
-  if (!gameState.waveActive) return;
-
-  const progress =
-    (Date.now() - gameState.waveStartTime) / CONFIG.WAVE_DURATION;
+  const elapsed = Date.now() - GameState.waveStartTime;
+  const progress = elapsed / CONFIG.WAVE_DURATION;
   const width = 200;
   const height = 10;
   const x = CONFIG.CANVAS_WIDTH - width - 20;
@@ -2037,224 +2359,48 @@ function drawWaveProgress() {
   ctx.font = '10px "Press Start 2P"';
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
-  ctx.fillText(`WAVE ${gameState.wave}`, x - 10, y);
+  ctx.fillText(`WAVE ${GameState.wave}`, x - 10, y);
 }
 
-// Update UI Displays
-function updateScoreDisplay() {
-  elements.currentScore.textContent = gameState.score
-    .toString()
-    .padStart(7, "0");
+// Draw Rounded Rectangle
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
 }
 
-function updateWaveDisplay() {
-  elements.currentWave.textContent = gameState.wave.toString().padStart(2, "0");
-}
+// Play Sound
+function playSound(soundId) {
+  if (GameState.sfxVolume === 0) return;
 
-function updateCoinsDisplay() {
-  elements.currentCoins.innerHTML = `<i class="fas fa-coins"></i> ${gameState.coins.toString().padStart(5, "0")}`;
-}
-
-function updateAccuracyDisplay() {
-  const accuracy =
-    gameState.wordsTyped > 0
-      ? Math.round((gameState.wordsCorrect / gameState.wordsTyped) * 100)
-      : 100;
-  elements.accuracyRate.textContent = `${accuracy}%`;
-}
-
-function updateComboDisplay() {
-  elements.comboCount.textContent =
-    gameState.currentCombo > 0 ? `x${gameState.currentCombo}` : "x1";
-}
-
-function updateHeartsDisplay() {
-  const heartsContainer = document.querySelector(".hearts-container");
-  heartsContainer.innerHTML = "";
-
-  for (let i = 0; i < gameState.health; i++) {
-    const heart = document.createElement("i");
-    heart.className = "fas fa-heart heart-icon";
-    heartsContainer.appendChild(heart);
+  const audio = document.getElementById(soundId);
+  if (audio) {
+    audio.volume = GameState.sfxVolume;
+    audio.currentTime = 0;
+    audio.play().catch((e) => {
+      // Silently handle autoplay restrictions
+    });
   }
 }
 
-function updateHighScore() {
-  elements.highScoreValue.textContent = gameState.highScore;
-}
+// Toggle Mute
+function toggleMute() {
+  GameState.sfxVolume = GameState.sfxVolume === 0 ? 0.9 : 0;
+  elements.sfxVolume.value = GameState.sfxVolume * 100;
+  elements.sfxVolumeValue.textContent = `${Math.round(GameState.sfxVolume * 100)}%`;
 
-function updateShopDisplays() {
-  elements.shopCoinsDisplay.textContent = gameState.coins;
-  elements.skinShopCoinsDisplay.textContent = gameState.coins;
-}
-
-function updatePauseStats() {
-  document.getElementById("pause-wave").textContent = gameState.wave;
-  document.getElementById("pause-score").textContent = gameState.score;
-  document.getElementById("pause-kills").textContent = gameState.zombiesKilled;
-
-  const accuracy =
-    gameState.wordsTyped > 0
-      ? Math.round((gameState.wordsCorrect / gameState.wordsTyped) * 100)
-      : 100;
-  document.getElementById("pause-accuracy").textContent = `${accuracy}%`;
-}
-
-function updateGameOverStats() {
-  document.getElementById("final-score").textContent = gameState.score;
-  document.getElementById("final-wave").textContent = gameState.wave;
-  document.getElementById("final-kills").textContent = gameState.zombiesKilled;
-
-  const accuracy =
-    gameState.wordsTyped > 0
-      ? Math.round((gameState.wordsCorrect / gameState.wordsTyped) * 100)
-      : 100;
-  document.getElementById("final-accuracy").textContent = `${accuracy}%`;
-  document.getElementById("final-coins").textContent = gameState.coins;
-}
-
-// Add Score
-function addScore(amount) {
-  gameState.score += amount;
-  updateScoreDisplay();
-}
-
-// Add Coins
-function addCoins(amount) {
-  gameState.coins += amount;
-  updateCoinsDisplay();
-}
-
-// Load Weapon Shop
-function loadWeaponShop() {
-  const container = document.getElementById("weapon-items-container");
-  container.innerHTML = "";
-
-  Object.entries(WEAPONS).forEach(([id, weapon]) => {
-    const isOwned = gameState.ownedGuns.includes(id);
-    const isEquipped = gameState.activeGun === id;
-
-    const item = document.createElement("div");
-    item.className = `shop-item ${isOwned ? "owned" : ""} ${isEquipped ? "equipped" : ""}`;
-
-    item.innerHTML = `
-            <div class="item-icon" style="color: ${weapon.color}">
-                <i class="${weapon.icon}"></i>
-            </div>
-            <div class="item-name">${weapon.name}</div>
-            <div class="item-cost ${weapon.cost === 0 ? "free" : ""}">
-                ${weapon.cost === 0 ? "FREE" : `<i class="fas fa-coins"></i> ${weapon.cost}`}
-            </div>
-            <div class="item-stats">
-                <div class="item-stat">
-                    <span>Damage</span>
-                    <span class="item-stat-value">${weapon.damage}/3</span>
-                </div>
-                <div class="item-stat">
-                    <span>Fire Rate</span>
-                    <span class="item-stat-value">${weapon.fireRate}/2</span>
-                </div>
-            </div>
-            ${isOwned ? '<div class="item-owned">OWNED</div>' : ""}
-            ${isEquipped ? '<div class="item-equipped">EQUIPPED</div>' : ""}
-        `;
-
-    item.addEventListener("click", () => handleWeaponPurchase(id));
-    container.appendChild(item);
-  });
-}
-
-// Load Skin Shop
-function loadSkinShop() {
-  const container = document.getElementById("skin-items-container");
-  container.innerHTML = "";
-
-  Object.entries(SKINS).forEach(([id, skin]) => {
-    const isOwned = gameState.ownedSkins.includes(id);
-    const isEquipped = gameState.activeSkin === id;
-
-    const item = document.createElement("div");
-    item.className = `shop-item ${isOwned ? "owned" : ""} ${isEquipped ? "equipped" : ""}`;
-
-    item.innerHTML = `
-            <div class="item-icon" style="color: ${skin.color}">
-                <i class="${skin.icon}"></i>
-            </div>
-            <div class="item-name">${skin.name}</div>
-            <div class="item-cost ${skin.cost === 0 ? "free" : ""}">
-                ${skin.cost === 0 ? "FREE" : `<i class="fas fa-coins"></i> ${skin.cost}`}
-            </div>
-            ${isOwned ? '<div class="item-owned">OWNED</div>' : ""}
-            ${isEquipped ? '<div class="item-equipped">EQUIPPED</div>' : ""}
-        `;
-
-    item.addEventListener("click", () => handleSkinPurchase(id));
-    container.appendChild(item);
-  });
-}
-
-// Handle Weapon Purchase
-function handleWeaponPurchase(weaponId) {
-  const weapon = WEAPONS[weaponId];
-
-  if (gameState.ownedGuns.includes(weaponId)) {
-    // Already owned, equip it
-    gameState.activeGun = weaponId;
-    localStorage.setItem("zts_activeGun", weaponId);
-    showNotification(`${weapon.name} equipped!`, "info");
-    loadWeaponShop();
-  } else if (gameState.coins >= weapon.cost) {
-    // Purchase weapon
-    gameState.coins -= weapon.cost;
-    gameState.ownedGuns.push(weaponId);
-    gameState.activeGun = weaponId;
-
-    // Save and update
-    saveGameData();
-    updateCoinsDisplay();
-    updateShopDisplays();
-    loadWeaponShop();
-
-    showNotification(`${weapon.name} purchased!`, "coin");
-  } else {
-    // Not enough coins
-    showNotification(
-      `Need ${weapon.cost - gameState.coins} more coins!`,
-      "error",
-    );
-  }
-}
-
-// Handle Skin Purchase
-function handleSkinPurchase(skinId) {
-  const skin = SKINS[skinId];
-
-  if (gameState.ownedSkins.includes(skinId)) {
-    // Already owned, equip it
-    gameState.activeSkin = skinId;
-    localStorage.setItem("zts_activeSkin", skinId);
-    showNotification(`${skin.name} equipped!`, "info");
-    loadSkinShop();
-  } else if (gameState.coins >= skin.cost) {
-    // Purchase skin
-    gameState.coins -= skin.cost;
-    gameState.ownedSkins.push(skinId);
-    gameState.activeSkin = skinId;
-
-    // Save and update
-    saveGameData();
-    updateCoinsDisplay();
-    updateShopDisplays();
-    loadSkinShop();
-
-    showNotification(`${skin.name} purchased!`, "coin");
-  } else {
-    // Not enough coins
-    showNotification(
-      `Need ${skin.cost - gameState.coins} more coins!`,
-      "error",
-    );
-  }
+  showNotification(
+    GameState.sfxVolume === 0 ? "Sound muted" : "Sound unmuted",
+    "info",
+  );
 }
 
 // Update Volume Display
@@ -2263,52 +2409,125 @@ function updateVolumeDisplay() {
   elements.sfxVolumeValue.textContent = `${elements.sfxVolume.value}%`;
 }
 
+// Switch Settings Tab
+function switchSettingsTab(e) {
+  const tab = e.target;
+  const tabId = tab.dataset.tab;
+
+  // Update active tab
+  document
+    .querySelectorAll(".tab-btn")
+    .forEach((t) => t.classList.remove("active"));
+  tab.classList.add("active");
+
+  // Show corresponding panel
+  document
+    .querySelectorAll(".settings-panel")
+    .forEach((panel) => panel.classList.remove("active"));
+  document.getElementById(`${tabId}-panel`).classList.add("active");
+}
+
 // Save Settings
 function saveSettings() {
-  gameState.masterVolume = elements.masterVolume.value / 100;
-  gameState.sfxVolume = elements.sfxVolume.value / 100;
-  gameState.difficulty = elements.difficulty.value;
-  gameState.wordHints = elements.wordHints.checked;
+  GameState.masterVolume = elements.masterVolume.value / 100;
+  GameState.sfxVolume = elements.sfxVolume.value / 100;
+  GameState.difficulty = elements.difficulty.value;
+  GameState.wordHints = elements.wordHints.checked;
+  GameState.screenShake = elements.screenShake.checked;
+  GameState.particlesEnabled = elements.particles.checked;
 
   saveGameData();
   showNotification("Settings saved!", "info");
 }
 
-// Toggle Music
-function toggleMusic() {
-  // Implement music toggle if you add background music
-  showNotification("Music toggled", "info");
-}
+// Reset Settings
+function resetSettings() {
+  if (confirm("Reset all settings to default?")) {
+    // Reset to defaults
+    GameState.masterVolume = 0.8;
+    GameState.sfxVolume = 0.9;
+    GameState.difficulty = "normal";
+    GameState.wordHints = true;
+    GameState.screenShake = true;
+    GameState.particlesEnabled = true;
 
-// Play Sound
-function playSound(soundId) {
-  if (!gameState.sfxVolume) return;
+    // Update UI
+    elements.masterVolume.value = 80;
+    elements.masterVolumeValue.textContent = "80%";
+    elements.sfxVolume.value = 90;
+    elements.sfxVolumeValue.textContent = "90%";
+    elements.difficulty.value = "normal";
+    elements.wordHints.checked = true;
+    elements.screenShake.checked = true;
+    elements.particles.checked = true;
+    elements.soundEffects.checked = true;
 
-  const audio = document.getElementById(soundId);
-  if (audio) {
-    audio.volume = gameState.sfxVolume;
-    audio.currentTime = 0;
-    audio.play().catch((e) => {
-      // Silently handle autoplay restrictions
-    });
+    showNotification("Settings reset to default!", "info");
   }
 }
 
-// Export game functions
-window.gameState = gameState;
-window.startNewGame = startNewGame;
+// Share Score
+function shareScore() {
+  const text = `I scored ${GameState.score} points in Zombie Typing Shooter! Can you beat my score?`;
+
+  if (navigator.share) {
+    navigator
+      .share({
+        title: "Zombie Typing Shooter Score",
+        text: text,
+        url: window.location.href,
+      })
+      .catch(console.error);
+  } else {
+    // Fallback: copy to clipboard
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showNotification("Score copied to clipboard!", "info");
+      })
+      .catch(console.error);
+  }
+}
+
+// Tutorial Navigation
+let currentTutorialStep = 1;
+
+function prevTutorialStep() {
+  if (currentTutorialStep > 1) {
+    currentTutorialStep--;
+    updateTutorialStep();
+  }
+}
+
+function nextTutorialStep() {
+  if (currentTutorialStep < 4) {
+    currentTutorialStep++;
+    updateTutorialStep();
+  }
+}
+
+function updateTutorialStep() {
+  // Update step display
+  document.querySelectorAll(".tutorial-section").forEach((section) => {
+    section.classList.remove("active");
+    if (
+      parseInt(section.querySelector(".section-number").textContent) ===
+      currentTutorialStep
+    ) {
+      section.classList.add("active");
+    }
+  });
+
+  // Update indicators
+  document.querySelectorAll(".indicator").forEach((indicator, index) => {
+    indicator.classList.toggle("active", index + 1 === currentTutorialStep);
+  });
+}
+
+// Export for debugging
+window.GameState = GameState;
+window.startGame = startGame;
 window.pauseGame = pauseGame;
-window.resumeGame = resumeGame;
 window.showScreen = showScreen;
 
-console.log("✅ Zombie Typing Shooter Pro Edition Ready!");
-console.log("🎮 Game Features:");
-console.log("   • Clean, modern UI with clear zombie word displays");
-console.log("   • 100% working gameplay with all features");
-console.log("   • Word matching with visual feedback");
-console.log("   • Three zombie types with distinct behaviors");
-console.log("   • Wave-based progression system");
-console.log("   • Combo and scoring system");
-console.log("   • Weapon and skin shops");
-console.log("   • Persistent save data");
-console.log("   • Settings and customization");
+console.log("✅ Zombie Typing Shooter - Fixed UI/UX Ready!");

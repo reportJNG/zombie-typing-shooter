@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zombie Typing Shooter | Pro Edition</title>
+    <title>Zombie Typing Shooter | Fixed UI/UX</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,405 +17,801 @@
     />
   </head>
   <body>
-    <div id="loading-screen">
-      <div class="loading-content">
-        <div class="pixel-loader">
-          <div class="pixel-dot"></div>
-          <div class="pixel-dot"></div>
-          <div class="pixel-dot"></div>
-          <div class="pixel-dot"></div>
-          <div class="pixel-dot"></div>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+      <div class="loading-container">
+        <div class="loading-content">
+          <div class="loading-animation">
+            <div class="loading-pixel"></div>
+            <div class="loading-pixel"></div>
+            <div class="loading-pixel"></div>
+          </div>
+          <h1 class="loading-title">ZOMBIE TYPING</h1>
+          <h2 class="loading-subtitle">SHOOTER</h2>
+          <div class="loading-progress-container">
+            <div class="loading-progress-bar" id="loading-bar"></div>
+          </div>
+          <p class="loading-tip" id="loading-tip">
+            Initializing zombie database...
+          </p>
         </div>
-        <h1 class="game-title-loading">ZOMBIE TYPING</h1>
-        <h2 class="game-subtitle-loading">SHOOTER PRO</h2>
-        <div class="loading-progress-container">
-          <div class="loading-progress-bar"></div>
-        </div>
-        <p class="loading-tip">Loading deadly word database...</p>
       </div>
     </div>
 
-    <div id="game-container" style="display: none">
+    <!-- Main Game Container -->
+    <div id="game-container" class="hidden">
+      <!-- Game Canvas -->
       <canvas id="game-canvas"></canvas>
 
-      <!-- Game UI Overlay -->
-      <div id="game-ui">
-        <!-- Top Bar -->
-        <div class="top-bar">
-          <div class="health-container">
-            <div class="health-label">HEALTH</div>
-            <div class="hearts-container">
-              <i class="fas fa-heart heart-icon"></i>
-              <i class="fas fa-heart heart-icon"></i>
-              <i class="fas fa-heart heart-icon"></i>
+      <!-- Game HUD -->
+      <div class="hud-container">
+        <!-- Top HUD -->
+        <div class="hud-top">
+          <!-- Health -->
+          <div class="hud-health">
+            <div class="hud-label">HEALTH</div>
+            <div class="health-bar-container">
+              <div class="health-bar-fill" id="health-bar"></div>
+              <div class="health-hearts" id="health-hearts">
+                <i class="fas fa-heart"></i>
+                <i class="fas fa-heart"></i>
+                <i class="fas fa-heart"></i>
+              </div>
             </div>
           </div>
 
-          <div class="score-container">
-            <div class="score-label">SCORE</div>
-            <div class="score-value" id="current-score">0000000</div>
+          <!-- Score -->
+          <div class="hud-score">
+            <div class="hud-label">SCORE</div>
+            <div class="hud-value" id="score-value">0000000</div>
           </div>
 
-          <div class="wave-container">
-            <div class="wave-label">WAVE</div>
-            <div class="wave-value" id="current-wave">01</div>
+          <!-- Wave -->
+          <div class="hud-wave">
+            <div class="hud-label">WAVE</div>
+            <div class="hud-value" id="wave-value">01</div>
           </div>
 
-          <div class="coins-container">
-            <div class="coins-label">COINS</div>
-            <div class="coins-value" id="current-coins">
-              <i class="fas fa-coins"></i> 00000
+          <!-- Coins -->
+          <div class="hud-coins">
+            <div class="hud-label">COINS</div>
+            <div class="coins-container">
+              <i class="fas fa-coins"></i>
+              <span id="coins-value">000</span>
             </div>
           </div>
         </div>
 
-        <!-- Bottom Input Area -->
-        <div class="input-area">
-          <div class="input-label">TYPE ZOMBIE WORD:</div>
-          <div class="input-container">
-            <input
-              type="text"
-              id="word-input"
-              maxlength="5"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-              placeholder="Start typing..."
-            />
-            <div class="input-display" id="typed-display"></div>
+        <!-- Middle HUD (Combo & Accuracy) -->
+        <div class="hud-middle">
+          <div class="hud-combo" id="combo-display">
+            <div class="combo-label">COMBO</div>
+            <div class="combo-value">x<span id="combo-value">1</span></div>
           </div>
-          <div class="input-stats">
-            <div class="stat">
-              <span class="stat-label">LETTERS:</span>
-              <span class="stat-value" id="letter-count">0/5</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">ACCURACY:</span>
-              <span class="stat-value" id="accuracy-rate">100%</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">COMBO:</span>
-              <span class="stat-value" id="combo-count">x1</span>
-            </div>
-          </div>
-          <div class="input-hint">
-            <kbd>ENTER</kbd> to shoot • <kbd>ESC</kbd> to pause
+
+          <div class="hud-accuracy">
+            <div class="accuracy-label">ACCURACY</div>
+            <div class="accuracy-value" id="accuracy-value">100%</div>
           </div>
         </div>
 
-        <!-- Active Zombies Panel -->
-        <div class="zombies-panel">
-          <div class="panel-header">
-            <i class="fas fa-skull-crossbones"></i>
+        <!-- Bottom HUD (Typing Area) -->
+        <div class="hud-bottom">
+          <div class="typing-container">
+            <div class="typing-header">
+              <div class="typing-label">
+                <i class="fas fa-keyboard"></i>
+                TYPE ZOMBIE WORD:
+              </div>
+              <div class="word-length">
+                <span id="current-length">0</span>/5
+              </div>
+            </div>
+
+            <div class="typing-input-container">
+              <div class="word-preview" id="word-preview">
+                <span class="letter"></span>
+                <span class="letter"></span>
+                <span class="letter"></span>
+                <span class="letter"></span>
+                <span class="letter"></span>
+              </div>
+
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="word-input"
+                  maxlength="5"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  placeholder="Start typing..."
+                />
+                <div class="input-border"></div>
+                <div class="input-cursor"></div>
+              </div>
+
+              <div class="input-hint">
+                Press <kbd>ENTER</kbd> to shoot • <kbd>ESC</kbd> to pause
+              </div>
+            </div>
+
+            <div class="typing-stats">
+              <div class="stat">
+                <span class="stat-label">KILLS:</span>
+                <span class="stat-value" id="kills-count">0</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">WORDS:</span>
+                <span class="stat-value" id="words-count">0</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">STREAK:</span>
+                <span class="stat-value" id="streak-count">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Zombies Sidebar -->
+        <div class="zombie-sidebar">
+          <div class="sidebar-header">
+            <i class="fas fa-skull"></i>
             <span>ACTIVE ZOMBIES</span>
+            <span class="zombie-count" id="zombie-count">0</span>
           </div>
-          <div class="zombies-list" id="zombies-list">
-            <div class="empty-message">
-              No zombies yet. Type words to spawn them!
+
+          <div class="zombie-list" id="zombie-list">
+            <div class="empty-state">
+              <i class="fas fa-ghost"></i>
+              <p>No zombies yet.<br />Start typing to spawn!</p>
+            </div>
+          </div>
+
+          <div class="sidebar-footer">
+            <div class="weapon-display">
+              <div class="weapon-icon" id="weapon-icon">
+                <i class="fas fa-gun"></i>
+              </div>
+              <div class="weapon-info">
+                <div class="weapon-name" id="weapon-name">PIXEL PISTOL</div>
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- Notifications -->
-        <div class="notifications-area" id="notifications-area"></div>
       </div>
 
-      <!-- Main Menu -->
-      <div id="main-menu" class="screen">
-        <div class="menu-content">
-          <div class="game-header">
-            <h1 class="game-title">ZOMBIE TYPING</h1>
-            <h2 class="game-subtitle">SHOOTER PRO</h2>
-            <div class="title-decoration"></div>
-          </div>
+      <!-- Notifications -->
+      <div class="notifications-container" id="notifications-container"></div>
+    </div>
 
+    <!-- Menu Screens -->
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen menu-screen">
+      <div class="menu-container">
+        <div class="menu-header">
+          <h1 class="game-title">ZOMBIE</h1>
+          <h2 class="game-subtitle">TYPING SHOOTER</h2>
+          <div class="title-decoration">
+            <div class="decoration-dot"></div>
+            <div class="decoration-line"></div>
+            <div class="decoration-dot"></div>
+          </div>
+        </div>
+
+        <div class="menu-content">
           <div class="menu-buttons">
-            <button class="menu-button primary" id="start-game">
-              <i class="fas fa-play"></i> START GAME
+            <button class="menu-btn primary" id="start-game">
+              <span class="btn-icon"><i class="fas fa-play"></i></span>
+              <span class="btn-text">
+                <span class="btn-title">START GAME</span>
+                <span class="btn-subtitle">Type words, kill zombies</span>
+              </span>
             </button>
-            <button class="menu-button" id="continue-game">
-              <i class="fas fa-redo"></i> CONTINUE
+
+            <button class="menu-btn" id="continue-game">
+              <span class="btn-icon"><i class="fas fa-redo"></i></span>
+              <span class="btn-text">
+                <span class="btn-title">CONTINUE</span>
+                <span class="btn-subtitle">Resume your last game</span>
+              </span>
             </button>
-            <button class="menu-button" id="weapon-shop">
-              <i class="fas fa-gun"></i> WEAPONS
-            </button>
-            <button class="menu-button" id="skin-shop">
-              <i class="fas fa-tshirt"></i> SKINS
-            </button>
-            <button class="menu-button" id="how-to-play">
-              <i class="fas fa-question-circle"></i> HOW TO PLAY
-            </button>
-            <button class="menu-button" id="settings">
-              <i class="fas fa-cog"></i> SETTINGS
-            </button>
+
+            <div class="menu-row">
+              <button class="menu-btn small" id="weapon-shop">
+                <span class="btn-icon"><i class="fas fa-gun"></i></span>
+                <span class="btn-title">WEAPONS</span>
+              </button>
+
+              <button class="menu-btn small" id="skin-shop">
+                <span class="btn-icon"><i class="fas fa-tshirt"></i></span>
+                <span class="btn-title">SKINS</span>
+              </button>
+            </div>
+
+            <div class="menu-row">
+              <button class="menu-btn small" id="how-to-play">
+                <span class="btn-icon"
+                  ><i class="fas fa-question-circle"></i
+                ></span>
+                <span class="btn-title">HOW TO PLAY</span>
+              </button>
+
+              <button class="menu-btn small" id="settings">
+                <span class="btn-icon"><i class="fas fa-cog"></i></span>
+                <span class="btn-title">SETTINGS</span>
+              </button>
+            </div>
           </div>
 
           <div class="menu-footer">
-            <div class="high-score">
+            <div class="high-score-card">
               <div class="high-score-label">HIGH SCORE</div>
-              <div class="high-score-value" id="high-score-value">0</div>
+              <div class="high-score-value" id="high-score-display">0</div>
             </div>
-            <div class="version">v2.1 PRO EDITION</div>
+
+            <div class="version-info">
+              <div class="version">UI/UX FIXED EDITION v2.1</div>
+              <div class="controls-hint">
+                <i class="fas fa-info-circle"></i>
+                <span>Type zombie words, press ENTER to shoot</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Pause Menu -->
-      <div id="pause-menu" class="screen">
-        <div class="menu-content">
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="screen menu-screen">
+      <div class="menu-container">
+        <div class="menu-header">
           <h1 class="pause-title">GAME PAUSED</h1>
+          <div class="pause-subtitle">The zombies are waiting...</div>
+        </div>
+
+        <div class="menu-content">
           <div class="pause-stats">
-            <div class="pause-stat">
-              <span>Wave:</span>
-              <span id="pause-wave">1</span>
+            <div class="stat-card">
+              <div class="stat-icon"><i class="fas fa-wave-square"></i></div>
+              <div class="stat-content">
+                <div class="stat-label">CURRENT WAVE</div>
+                <div class="stat-value" id="pause-wave-value">1</div>
+              </div>
             </div>
-            <div class="pause-stat">
-              <span>Score:</span>
-              <span id="pause-score">0</span>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-skull-crossbones"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">ZOMBIES KILLED</div>
+                <div class="stat-value" id="pause-kills-value">0</div>
+              </div>
             </div>
-            <div class="pause-stat">
-              <span>Kills:</span>
-              <span id="pause-kills">0</span>
+
+            <div class="stat-card">
+              <div class="stat-icon"><i class="fas fa-coins"></i></div>
+              <div class="stat-content">
+                <div class="stat-label">COINS EARNED</div>
+                <div class="stat-value" id="pause-coins-value">0</div>
+              </div>
             </div>
-            <div class="pause-stat">
-              <span>Accuracy:</span>
-              <span id="pause-accuracy">100%</span>
+
+            <div class="stat-card">
+              <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+              <div class="stat-content">
+                <div class="stat-label">ACCURACY</div>
+                <div class="stat-value" id="pause-accuracy-value">100%</div>
+              </div>
             </div>
           </div>
-          <div class="pause-buttons">
-            <button class="menu-button primary" id="resume-game">
-              <i class="fas fa-play"></i> RESUME
+
+          <div class="menu-buttons">
+            <button class="menu-btn primary" id="resume-game">
+              <span class="btn-icon"><i class="fas fa-play"></i></span>
+              <span class="btn-title">RESUME GAME</span>
             </button>
-            <button class="menu-button" id="restart-game">
-              <i class="fas fa-redo"></i> RESTART
+
+            <button class="menu-btn" id="restart-game">
+              <span class="btn-icon"><i class="fas fa-redo"></i></span>
+              <span class="btn-title">RESTART</span>
             </button>
-            <button class="menu-button" id="pause-to-menu">
-              <i class="fas fa-home"></i> MAIN MENU
+
+            <button class="menu-btn" id="main-menu-btn">
+              <span class="btn-icon"><i class="fas fa-home"></i></span>
+              <span class="btn-title">MAIN MENU</span>
             </button>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Game Over Screen -->
-      <div id="game-over" class="screen">
-        <div class="menu-content">
+    <!-- Game Over Screen -->
+    <div id="game-over" class="screen menu-screen">
+      <div class="menu-container">
+        <div class="menu-header">
           <h1 class="game-over-title">GAME OVER</h1>
-          <div class="skull-icon">
+          <div class="game-over-subtitle">
+            The zombies have overrun your position!
+          </div>
+          <div class="skull-animation">
             <i class="fas fa-skull"></i>
           </div>
-
-          <div class="final-stats">
-            <div class="final-stat main">
-              <div class="final-label">FINAL SCORE</div>
-              <div class="final-value" id="final-score">0</div>
-            </div>
-
-            <div class="final-stats-grid">
-              <div class="final-stat">
-                <div class="final-label">Wave</div>
-                <div class="final-value" id="final-wave">1</div>
-              </div>
-              <div class="final-stat">
-                <div class="final-label">Kills</div>
-                <div class="final-value" id="final-kills">0</div>
-              </div>
-              <div class="final-stat">
-                <div class="final-label">Accuracy</div>
-                <div class="final-value" id="final-accuracy">100%</div>
-              </div>
-              <div class="final-stat">
-                <div class="final-label">Coins Earned</div>
-                <div class="final-value" id="final-coins">0</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="game-over-buttons">
-            <button class="menu-button primary" id="play-again">
-              <i class="fas fa-redo"></i> PLAY AGAIN
-            </button>
-            <button class="menu-button" id="game-over-to-menu">
-              <i class="fas fa-home"></i> MAIN MENU
-            </button>
-          </div>
         </div>
-      </div>
 
-      <!-- Weapon Shop -->
-      <div id="weapon-shop-screen" class="screen">
-        <div class="shop-content">
-          <div class="shop-header">
-            <h1><i class="fas fa-gun"></i> WEAPON SHOP</h1>
-            <div class="shop-coins">
-              <i class="fas fa-coins"></i>
-              <span id="shop-coins-display">0</span>
-            </div>
-          </div>
-
-          <div class="shop-items" id="weapon-items-container">
-            <!-- Weapons will be loaded here -->
-          </div>
-
-          <div class="shop-buttons">
-            <button class="menu-button" id="back-from-weapons">
-              <i class="fas fa-arrow-left"></i> BACK
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Skin Shop -->
-      <div id="skin-shop-screen" class="screen">
-        <div class="shop-content">
-          <div class="shop-header">
-            <h1><i class="fas fa-tshirt"></i> SKIN SHOP</h1>
-            <div class="shop-coins">
-              <i class="fas fa-coins"></i>
-              <span id="skin-shop-coins-display">0</span>
-            </div>
-          </div>
-
-          <div class="shop-items" id="skin-items-container">
-            <!-- Skins will be loaded here -->
-          </div>
-
-          <div class="shop-buttons">
-            <button class="menu-button" id="back-from-skins">
-              <i class="fas fa-arrow-left"></i> BACK
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- How to Play -->
-      <div id="how-to-play-screen" class="screen">
         <div class="menu-content">
-          <h1><i class="fas fa-graduation-cap"></i> HOW TO PLAY</h1>
-
-          <div class="instructions">
-            <div class="instruction-step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <h3>Type Zombie Words</h3>
-                <p>
-                  Each zombie has a 5-letter word above its head. Type the exact
-                  word to shoot it.
-                </p>
+          <div class="result-stats">
+            <div class="result-card highlight">
+              <div class="result-icon"><i class="fas fa-trophy"></i></div>
+              <div class="result-content">
+                <div class="result-label">FINAL SCORE</div>
+                <div class="result-value" id="final-score-value">0</div>
               </div>
             </div>
 
-            <div class="instruction-step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <h3>Press ENTER to Shoot</h3>
-                <p>
-                  After typing a 5-letter word, press <kbd>ENTER</kbd> to fire
-                  your weapon.
-                </p>
+            <div class="result-grid">
+              <div class="result-item">
+                <div class="result-label">Wave Reached</div>
+                <div class="result-value" id="final-wave-value">1</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Zombies Killed</div>
+                <div class="result-value" id="final-kills-value">0</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Words Typed</div>
+                <div class="result-value" id="final-words-value">0</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Accuracy</div>
+                <div class="result-value" id="final-accuracy-value">100%</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Coins Earned</div>
+                <div class="result-value" id="final-coins-value">0</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Max Combo</div>
+                <div class="result-value" id="final-combo-value">x1</div>
               </div>
             </div>
 
-            <div class="instruction-step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <h3>Zombie Types</h3>
-                <div class="zombie-types-list">
-                  <div class="zombie-type-info">
-                    <span class="zombie-color normal"></span>
-                    <span>Normal: 1 word = kill</span>
-                  </div>
-                  <div class="zombie-type-info">
-                    <span class="zombie-color hard"></span>
-                    <span>Hard: Faster, 3 coins</span>
-                  </div>
-                  <div class="zombie-type-info">
-                    <span class="zombie-color boss"></span>
-                    <span>Boss: 5 words needed</span>
+            <div
+              class="new-high-score"
+              id="new-high-score"
+              style="display: none"
+            >
+              <i class="fas fa-crown"></i>
+              <span>NEW HIGH SCORE!</span>
+            </div>
+          </div>
+
+          <div class="menu-buttons">
+            <button class="menu-btn primary" id="play-again-btn">
+              <span class="btn-icon"><i class="fas fa-redo"></i></span>
+              <span class="btn-title">PLAY AGAIN</span>
+            </button>
+
+            <button class="menu-btn" id="game-over-menu-btn">
+              <span class="btn-icon"><i class="fas fa-home"></i></span>
+              <span class="btn-title">MAIN MENU</span>
+            </button>
+
+            <button class="menu-btn" id="share-score-btn">
+              <span class="btn-icon"><i class="fas fa-share-alt"></i></span>
+              <span class="btn-title">SHARE SCORE</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weapon Shop -->
+    <div id="weapon-shop" class="screen menu-screen shop-screen">
+      <div class="shop-container">
+        <div class="shop-header">
+          <h1 class="shop-title">
+            <i class="fas fa-gun"></i>
+            WEAPON SHOP
+          </h1>
+          <div class="shop-info">
+            <div class="coins-display">
+              <i class="fas fa-coins"></i>
+              <span id="weapon-shop-coins">0</span>
+            </div>
+            <button class="back-btn" id="back-from-weapons">
+              <i class="fas fa-arrow-left"></i>
+              BACK
+            </button>
+          </div>
+        </div>
+
+        <div class="shop-content">
+          <div class="current-equipment">
+            <div class="equipment-label">CURRENTLY EQUIPPED</div>
+            <div class="equipment-item equipped" id="current-weapon-display">
+              <div class="equipment-icon">
+                <i class="fas fa-gun"></i>
+              </div>
+              <div class="equipment-info">
+                <div class="equipment-name">PIXEL PISTOL</div>
+                <div class="equipment-status">EQUIPPED</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shop-items-grid" id="weapon-items-grid">
+            <!-- Weapons loaded by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skin Shop -->
+    <div id="skin-shop" class="screen menu-screen shop-screen">
+      <div class="shop-container">
+        <div class="shop-header">
+          <h1 class="shop-title">
+            <i class="fas fa-tshirt"></i>
+            SKIN SHOP
+          </h1>
+          <div class="shop-info">
+            <div class="coins-display">
+              <i class="fas fa-coins"></i>
+              <span id="skin-shop-coins">0</span>
+            </div>
+            <button class="back-btn" id="back-from-skins">
+              <i class="fas fa-arrow-left"></i>
+              BACK
+            </button>
+          </div>
+        </div>
+
+        <div class="shop-content">
+          <div class="current-equipment">
+            <div class="equipment-label">CURRENTLY EQUIPPED</div>
+            <div class="equipment-item equipped" id="current-skin-display">
+              <div class="equipment-icon">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="equipment-info">
+                <div class="equipment-name">DEFAULT AGENT</div>
+                <div class="equipment-status">EQUIPPED</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shop-items-grid" id="skin-items-grid">
+            <!-- Skins loaded by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to Play -->
+    <div id="how-to-play" class="screen menu-screen">
+      <div class="tutorial-container">
+        <div class="tutorial-header">
+          <h1 class="tutorial-title">
+            <i class="fas fa-graduation-cap"></i>
+            HOW TO PLAY
+          </h1>
+          <button class="back-btn" id="back-from-tutorial">
+            <i class="fas fa-arrow-left"></i>
+            BACK
+          </button>
+        </div>
+
+        <div class="tutorial-content">
+          <div class="tutorial-section active">
+            <div class="section-number">01</div>
+            <div class="section-content">
+              <h3>Type to Shoot</h3>
+              <p>
+                Each zombie has a <strong>5-letter word</strong> above its head.
+                Type the exact word and press <kbd>ENTER</kbd> to shoot and kill
+                the zombie.
+              </p>
+              <div class="tutorial-demo">
+                <div class="demo-zombie">
+                  <div class="zombie-word">BRAVO</div>
+                  <div class="zombie-icon normal"></div>
+                </div>
+                <div class="demo-input">
+                  <div class="typed-letters">BRAVO</div>
+                  <div class="demo-action">
+                    <kbd>ENTER</kbd>
+                    <span>→</span>
+                    <div class="demo-bullet">💥</div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="instruction-step">
-              <div class="step-number">4</div>
-              <div class="step-content">
-                <h3>Survive Waves</h3>
-                <p>
-                  Each wave gets harder. Survive as long as possible to set high
-                  scores!
-                </p>
+          <div class="tutorial-section">
+            <div class="section-number">02</div>
+            <div class="section-content">
+              <h3>Zombie Types</h3>
+              <div class="zombie-types">
+                <div class="zombie-type-card normal">
+                  <div class="type-icon"><i class="fas fa-walking"></i></div>
+                  <div class="type-info">
+                    <div class="type-name">Normal Zombie</div>
+                    <div class="type-desc">1 correct word = kill</div>
+                    <div class="type-reward">
+                      Drops <i class="fas fa-coins"></i> 1 coin
+                    </div>
+                  </div>
+                </div>
+
+                <div class="zombie-type-card hard">
+                  <div class="type-icon"><i class="fas fa-running"></i></div>
+                  <div class="type-info">
+                    <div class="type-name">Hard Zombie</div>
+                    <div class="type-desc">Faster movement speed</div>
+                    <div class="type-reward">
+                      Drops <i class="fas fa-coins"></i> 3 coins
+                    </div>
+                  </div>
+                </div>
+
+                <div class="zombie-type-card boss">
+                  <div class="type-icon"><i class="fas fa-crown"></i></div>
+                  <div class="type-info">
+                    <div class="type-name">Boss Zombie</div>
+                    <div class="type-desc">5 words needed to kill</div>
+                    <div class="type-reward">
+                      Drops <i class="fas fa-coins"></i> 10+ coins
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <button class="menu-button" id="back-from-help">
-            <i class="fas fa-arrow-left"></i> BACK
-          </button>
+          <div class="tutorial-section">
+            <div class="section-number">03</div>
+            <div class="section-content">
+              <h3>Combo System</h3>
+              <p>
+                Kill zombies quickly to build combos! Higher combos give bonus
+                points.
+              </p>
+              <div class="combo-levels">
+                <div class="combo-level">
+                  <div class="level-badge">x1</div>
+                  <div class="level-info">Base multiplier</div>
+                </div>
+                <div class="combo-level">
+                  <div class="level-badge">x2</div>
+                  <div class="level-info">2 kills within 5 seconds</div>
+                </div>
+                <div class="combo-level">
+                  <div class="level-badge">x3</div>
+                  <div class="level-info">3 kills within 5 seconds</div>
+                </div>
+                <div class="combo-level">
+                  <div class="level-badge">x5</div>
+                  <div class="level-info">5+ kills within 5 seconds</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tutorial-section">
+            <div class="section-number">04</div>
+            <div class="section-content">
+              <h3>Shop & Upgrades</h3>
+              <p>
+                Spend coins in the shop to upgrade your weapons and unlock new
+                skins. Better weapons have higher damage and unique visual
+                effects.
+              </p>
+              <div class="shop-preview">
+                <div class="preview-item">
+                  <div class="item-icon"><i class="fas fa-gun"></i></div>
+                  <div class="item-name">New Weapon</div>
+                  <div class="item-price"><i class="fas fa-coins"></i> 50</div>
+                </div>
+                <div class="preview-item">
+                  <div class="item-icon"><i class="fas fa-tshirt"></i></div>
+                  <div class="item-name">Cool Skin</div>
+                  <div class="item-price"><i class="fas fa-coins"></i> 100</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tutorial-navigation">
+            <button class="nav-btn" id="prev-tutorial">
+              <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="step-indicators">
+              <span class="indicator active"></span>
+              <span class="indicator"></span>
+              <span class="indicator"></span>
+              <span class="indicator"></span>
+            </div>
+            <button class="nav-btn" id="next-tutorial">
+              Next <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Settings -->
-      <div id="settings-screen" class="screen">
-        <div class="menu-content">
-          <h1><i class="fas fa-cog"></i> SETTINGS</h1>
+    <!-- Settings -->
+    <div id="settings" class="screen menu-screen">
+      <div class="settings-container">
+        <div class="settings-header">
+          <h1 class="settings-title">
+            <i class="fas fa-cog"></i>
+            SETTINGS
+          </h1>
+          <button class="back-btn" id="back-from-settings">
+            <i class="fas fa-arrow-left"></i>
+            BACK
+          </button>
+        </div>
 
-          <div class="settings-options">
-            <div class="setting">
-              <label for="master-volume">
-                <i class="fas fa-volume-up"></i> Master Volume
-              </label>
-              <input
-                type="range"
-                id="master-volume"
-                min="0"
-                max="100"
-                value="80"
-              />
-              <span id="master-volume-value">80%</span>
+        <div class="settings-content">
+          <div class="settings-tabs">
+            <button class="tab-btn active" data-tab="audio">AUDIO</button>
+            <button class="tab-btn" data-tab="gameplay">GAMEPLAY</button>
+            <button class="tab-btn" data-tab="graphics">GRAPHICS</button>
+          </div>
+
+          <div class="settings-panels">
+            <!-- Audio Settings -->
+            <div class="settings-panel active" id="audio-panel">
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-volume-up"></i>
+                  Master Volume
+                </div>
+                <div class="setting-control">
+                  <input
+                    type="range"
+                    class="volume-slider"
+                    id="master-volume"
+                    min="0"
+                    max="100"
+                    value="80"
+                  />
+                  <span class="slider-value" id="master-volume-value">80%</span>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-gun"></i>
+                  SFX Volume
+                </div>
+                <div class="setting-control">
+                  <input
+                    type="range"
+                    class="volume-slider"
+                    id="sfx-volume"
+                    min="0"
+                    max="100"
+                    value="90"
+                  />
+                  <span class="slider-value" id="sfx-volume-value">90%</span>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-bell"></i>
+                  Sound Effects
+                </div>
+                <div class="setting-control">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="sound-effects" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <div class="setting">
-              <label for="sfx-volume">
-                <i class="fas fa-gun"></i> SFX Volume
-              </label>
-              <input
-                type="range"
-                id="sfx-volume"
-                min="0"
-                max="100"
-                value="90"
-              />
-              <span id="sfx-volume-value">90%</span>
+            <!-- Gameplay Settings -->
+            <div class="settings-panel" id="gameplay-panel">
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-skull"></i>
+                  Difficulty
+                </div>
+                <div class="setting-control">
+                  <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-keyboard"></i>
+                  Input Sensitivity
+                </div>
+                <div class="setting-control">
+                  <select id="input-sensitivity">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-lightbulb"></i>
+                  Word Hints
+                </div>
+                <div class="setting-control">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="word-hints" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <div class="setting">
-              <label for="difficulty">
-                <i class="fas fa-skull"></i> Difficulty
-              </label>
-              <select id="difficulty">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
+            <!-- Graphics Settings -->
+            <div class="settings-panel" id="graphics-panel">
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-gamepad"></i>
+                  Screen Shake
+                </div>
+                <div class="setting-control">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="screen-shake" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
 
-            <div class="setting">
-              <label for="word-hints">
-                <i class="fas fa-lightbulb"></i> Word Hints
-              </label>
-              <div class="toggle-switch">
-                <input type="checkbox" id="word-hints" checked />
-                <label for="word-hints"></label>
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-fire"></i>
+                  Particle Effects
+                </div>
+                <div class="setting-control">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="particles" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <i class="fas fa-palette"></i>
+                  Visual Quality
+                </div>
+                <div class="setting-control">
+                  <select id="visual-quality">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="settings-buttons">
-            <button class="menu-button primary" id="save-settings">
-              <i class="fas fa-save"></i> SAVE
+          <div class="settings-actions">
+            <button class="menu-btn primary" id="save-settings">
+              <i class="fas fa-save"></i>
+              SAVE SETTINGS
             </button>
-            <button class="menu-button" id="back-from-settings">
-              <i class="fas fa-arrow-left"></i> BACK
+            <button class="menu-btn" id="reset-settings">
+              <i class="fas fa-undo"></i>
+              RESET DEFAULTS
             </button>
           </div>
         </div>
@@ -423,30 +819,36 @@
     </div>
 
     <!-- Audio Elements -->
-    <audio
-      id="shoot-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-laser-gun-shot-1678.mp3"
-    ></audio>
-    <audio
-      id="zombie-hit-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-explosion-2759.mp3"
-    ></audio>
-    <audio
-      id="coin-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"
-    ></audio>
-    <audio
-      id="type-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"
-    ></audio>
-    <audio
-      id="game-over-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-player-losing-or-failing-2042.mp3"
-    ></audio>
-    <audio
-      id="wave-start-sound"
-      src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3"
-    ></audio>
+    <audio id="shoot-sound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-laser-gun-shot-1678.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+    <audio id="hit-sound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-explosion-2759.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+    <audio id="coin-sound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+    <audio id="type-sound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+    <audio id="game-over-sound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-player-losing-or-failing-2042.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
 
     <script src="script.js"></script>
   </body>
